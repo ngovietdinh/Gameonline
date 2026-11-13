@@ -51,6 +51,12 @@ Ghi chú:
 
 ## Luật chơi
 
+- **Đấu đội (mặc định):** hai phe **Công an** và **Tội phạm**. Vào phòng thì được xếp vào phe đang ít người hơn; ở phòng chờ bấm nút để đổi phe, lúc đang đấu thì tạm dừng rồi bấm **Đổi phe**.
+- Hai phe không được chênh nhau quá 2 người: phe đang đông hơn 2 thì không vào thêm được. Lúc bắt đầu trận, nếu vẫn lệch quá 2 thì máy chủ tự chuyển người vào sau cùng của phe đông sang phe kia.
+- Không bắn trúng đồng đội. Mỗi lần hạ một đối thủ, phe mình được 1 điểm; hết giờ phe nhiều điểm hơn thắng.
+- Công an mặc đồng phục xanh đen, áo giáp có chữ, tên hiện màu xanh với đồng đội. Tội phạm mặc đồ tối màu, áo ngực nâu, mũ đỏ sẫm. Tên đối thủ hiện màu đỏ.
+- **Tự do:** chọn lúc tạo phòng nếu muốn ai cũng là đối thủ của nhau.
+
 - Mỗi phòng là một trận riêng, có đồng hồ đếm ngược. Hết giờ, ai hạ nhiều nhất thắng (bằng nhau thì ai chết ít hơn xếp trên), rồi cả phòng về phòng chờ để chủ phòng bắt đầu trận mới.
 - Chủ phòng rời đi thì người vào sớm nhất còn lại lên làm chủ phòng. Phòng trống tự đóng.
 - Người chơi khác hiện ra là lính: mũ sắt, kính, áo giáp, ba lô, quân phục rằn ri; chân tay cử động khi chạy, người ngả theo hướng ngắm, bị hạ thì ngã xuống. Mỗi người có một màu nhận diện trên vai, mũ và ba lô.
@@ -93,8 +99,10 @@ Chọn bản đồ ở màn hình đầu (chơi đơn) hoặc lúc tạo phòng 
 
 ## Điều khiển
 
-- Máy tính: WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, 1 đến 5 đổi súng, Shift chạy nhanh, Space nhảy, Esc tạm dừng.
-- Điện thoại: kéo nửa trái để chạy, kéo nửa phải để ngắm, giữ nút Bắn; có nút Ngắm, Nạp, Đổi, Nhảy.
+- Máy tính: WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, 1 đến 8 đổi súng, Space nhảy, Esc tạm dừng.
+- **Shift** (giữ, khi đang tiến): chạy nhanh. **Ctrl** hoặc **C** (giữ): ngồi, đi chậm hơn, bắn chụm hơn, khó bị trúng hơn. **Tab** (giữ): bảng thành tích.
+- Khi vào trận, game tự bật toàn màn hình. Trên Chrome và Edge việc này còn khóa phím, nhờ đó giữ Ctrl rồi bấm W không đóng thẻ trình duyệt. Trên Firefox và Safari, Ctrl+W vẫn là lệnh đóng thẻ (trình duyệt sẽ hỏi lại trước khi đóng), nên dùng phím C để ngồi.
+- Điện thoại: kéo nửa trái để chạy, kéo nửa phải để ngắm, giữ nút Bắn; có nút Ngắm, Nạp, Đổi, Nhảy, Ngồi. Nút ≡ ở góc trên phải mở bảng thành tích.
 
 ## Trong thư mục có gì
 

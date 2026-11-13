@@ -133,6 +133,28 @@
   .list .btn { min-height: 44px; padding: 6px 16px; font-size: 16px; flex: none; }
   .create { display: grid; gap: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
   .create .field { max-width: none; }
+  .tA { color: #6fb6ff; } .tB { color: #ff7366; }
+  #timer { display: flex; gap: 14px; align-items: baseline; }
+  #timer b { font-size: 26px; min-width: 1.2ch; text-align: center; }
+  #score { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(4,6,10,.5); padding: 60px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px)); }
+  .sc-card { width: 100%; max-width: 720px; max-height: 100%; overflow-y: auto; display: grid; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 18px; }
+  .sc-card h3 { margin: 0; font: 800 22px/1.1 var(--display); letter-spacing: .06em; text-transform: uppercase; }
+  .sc-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .sc-col { display: grid; gap: 4px; align-content: start; }
+  .sc-col h4 { margin: 0 0 4px; display: flex; justify-content: space-between; font: 800 18px/1.1 var(--display); letter-spacing: .05em; text-transform: uppercase; }
+  .sc-row { display: grid; grid-template-columns: 1fr 44px 44px; gap: 8px; padding: 5px 8px; font-size: 14px; background: rgba(255,255,255,.05); border-radius: 2px; }
+  .sc-row.head { background: none; color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; padding-block: 0; }
+  .sc-row span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .sc-row b { text-align: right; font-weight: 600; }
+  .sc-row.me { outline: 1px solid var(--cyan); }
+  .teams { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .teams > div { display: grid; gap: 6px; align-content: start; min-width: 0; }
+  .teams h3 { margin: 0; font: 800 20px/1.1 var(--display); letter-spacing: .05em; text-transform: uppercase; }
+  .teams .btn { min-height: 44px; font-size: 15px; padding: 6px 10px; }
+  .teams .list li { padding: 6px 10px; }
+  #board li.tA span { color: #9fd0ff; } #board li.tB span { color: #ffa399; }
+  #crouchBtn { width: 56px; height: 56px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 164px); bottom: 22px; }
+  #crouchBtn[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
   #timer { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font: 800 30px/1 var(--display); letter-spacing: .04em; text-shadow: 0 2px 6px #000; }
   #timer.low { color: var(--hp); }
   #scope { position: absolute; inset: 0; opacity: 0; background: radial-gradient(circle at 50% 50%, transparent 0, transparent 34vmin, rgba(0,0,0,.7) 34.5vmin, #000 36vmin); }
@@ -175,12 +197,14 @@
     <div class="tl"><small id="objLabel">Đợt 1</small><b id="scoreTxt">0</b><span id="leftTxt">Còn 0 mục tiêu</span><ol id="board" hidden></ol></div>
     <div class="tr">
       <button class="icon-btn" id="soundBtn" type="button" aria-label="Âm thanh" aria-pressed="true">♪</button>
+      <button class="icon-btn" id="scoreBtn" type="button" aria-label="Bảng thành tích">≡</button>
       <button class="icon-btn" id="pauseBtn" type="button" aria-label="Tạm dừng"><span class="pause-glyph"></span></button>
     </div>
     <div id="fpsTxt"></div>
     <div class="bl" id="hpBox"><small>Máu</small><div class="hpnum" id="hpTxt">100</div><div class="bar"><i id="hpBar"></i></div></div>
     <div class="br" id="ammoBox"><small id="gunTxt">Các-bin</small><b><i id="ammoTxt" style="font-style:normal">30</i><span id="magTxt"> / 30</span></b></div>
-    <div id="timer" hidden>0:00</div>
+    <div id="timer" hidden><b id="scA" class="tA">0</b><span id="tmTxt">0:00</span><b id="scB" class="tB">0</b></div>
+    <div id="score" hidden><div class="sc-card"><h3 id="scTitle"></h3><div class="sc-cols" id="scCols"></div></div></div>
     <div id="wbar"></div>
     <div id="banner"></div>
     <div id="touchUi" hidden>
@@ -188,6 +212,7 @@
       <button class="tbtn" id="swapBtn" type="button" aria-label="Đổi súng">Đổi</button>
       <button class="tbtn" id="adsBtn" type="button" aria-label="Ngắm" aria-pressed="false">Ngắm</button>
       <button class="tbtn" id="reloadBtn" type="button" aria-label="Nạp đạn">Nạp</button>
+      <button class="tbtn" id="crouchBtn" type="button" aria-label="Ngồi" aria-pressed="false">Ngồi</button>
       <button class="tbtn" id="jumpBtn" type="button" aria-label="Nhảy">Nhảy</button>
       <button class="tbtn" id="fireBtn" type="button" aria-label="Bắn">Bắn</button>
     </div>
@@ -198,9 +223,9 @@
       <h1>Hẻm<br>Mưa</h1>
       <p>Nửa đêm, một con hẻm vừa tạnh mưa. Đàn máy bay tuần tra bay vào từ trên mái. <strong>Giữ hẻm qua từng đợt.</strong></p>
       <ul class="how">
-        <li><b>Máy tính:</b> WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, phím 1 đến 8 hoặc lăn chuột để đổi súng, Shift chạy nhanh, Space nhảy.</li>
+        <li><b>Máy tính:</b> WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, phím 1 đến 8 hoặc lăn chuột để đổi súng, Shift chạy nhanh, Ctrl hoặc C để ngồi, Space nhảy, giữ Tab xem bảng thành tích.</li>
         <li><b>Điện thoại:</b> kéo nửa trái để chạy, kéo nửa phải để ngắm, giữ nút Bắn.</li>
-        <li><b>Đấu nhiều người:</b> mọi người mở chung địa chỉ này, bấm nút đấu rồi tạo phòng hoặc vào phòng có sẵn. Hết giờ thì ai hạ nhiều nhất thắng.</li>
+        <li><b>Đấu nhiều người:</b> mọi người mở chung địa chỉ này, bấm nút đấu rồi tạo phòng hoặc vào phòng có sẵn. Đấu đội chia hai phe Công an và Tội phạm, hết giờ phe nào hạ nhiều hơn thì thắng.</li>
       </ul>
       <div class="load" id="loadBar"><i id="loadFill"></i></div>
       <label class="field" for="nick"><span>Tên trong trận</span><input id="nick" type="text" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Khách"></label>
@@ -228,6 +253,7 @@
       <form class="create" id="createForm">
         <label class="field" for="roomNameIn"><span>Tên phòng mới</span><input id="roomNameIn" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Phòng của tao"></label>
         <div class="row"><span class="seglabel">Bản đồ</span><div class="seg" id="mapSeg2"><button type="button" data-v="0" aria-pressed="true">Hẻm</button><button type="button" data-v="1" aria-pressed="false">Chợ đêm</button><button type="button" data-v="2" aria-pressed="false">Công trường</button></div></div>
+        <div class="row"><span class="seglabel">Chế độ</span><div class="seg" id="modeSeg"><button type="button" data-v="1" aria-pressed="true">Đấu đội</button><button type="button" data-v="0" aria-pressed="false">Tự do</button></div></div>
         <div class="row"><span class="seglabel">Thời gian</span>
           <div class="seg" id="durSeg"><button type="button" data-v="3" aria-pressed="false">3 phút</button><button type="button" data-v="5" aria-pressed="true">5 phút</button><button type="button" data-v="10" aria-pressed="false">10 phút</button></div>
         </div>
@@ -244,6 +270,7 @@
     <div class="card wide">
       <h2 id="roomName">Phòng</h2>
       <p id="roomMeta"></p>
+      <div class="teams" id="teamCols" hidden></div>
       <ul class="list" id="playerList"></ul>
       <p id="roomWait">Chờ chủ phòng bắt đầu trận.</p>
       <div class="row"><button class="btn alt" id="roomStart" type="button">Bắt đầu trận</button><button class="btn ghost" id="roomLeave" type="button">Rời phòng</button></div>
@@ -272,6 +299,7 @@
       <div class="row">
         <button class="btn" id="resumeBtn" type="button">Chơi tiếp</button>
         <button class="btn ghost" id="restartBtn" type="button">Chơi lại</button>
+        <button class="btn ghost" id="teamBtn" type="button" hidden>Đổi phe</button>
         <button class="btn ghost" id="lobbyBtn" type="button">Về sảnh</button>
       </div>
     </div>
@@ -888,13 +916,13 @@
   function F_door(F) { F(B.wood, .9, 2, .06, 1.5, 1, .03); F(B.frame, 1.06, .1, .1, 1.5, 2.05, .05); }
 
   const MAPS = [
-    { name: 'Hẻm', seed: 20261113, build: buildAlley, neonPri: [0, 4, 5, 7, 3, 1, 2, 6], air: [[-4, 4, -24, 25], [4, 15, -5, 5], [-24, 24, 24, 38]], bounds: [-25, 25, -25, 39], solo: [0, 18, 0], dc: [0, 0],
+    { name: 'Hẻm', seed: 20261113, build: buildAlley, neonPri: [0, 4, 5, 7, 3, 1, 2, 6], air: [[-4, 4, -24, 25], [4, 15, -5, 5], [-24, 24, 24, 38]], bounds: [-25, 25, -25, 39], solo: [0, 18, 0], dc: [0, 0], tsp: [[[-19, 31], [19, 31], [0, 35], [-8, 34], [8, 27]], [[0, -20], [2, -14], [-2.4, -17], [12.5, 3], [9, -3]]],
       spawns: [[0, 18], [0, -20], [-2.4, -6], [2.4, 8], [9, -3], [12.5, 3], [-2, 2], [2, -14], [-19, 31], [19, 31], [0, 35]],
       fly(t) { camera.position.set(Math.sin(t * .11) * 1.6, 1.9 + Math.sin(t * .17) * .25, 9 + Math.cos(t * .06) * 9); camera.rotation.set(.06 + Math.sin(t * .13) * .03, Math.sin(t * .09) * .22, 0); } },
-    { name: 'Chợ đêm', seed: 777123, build: buildMarket, amb: 1.6, air: [[-22, 22, -22, 22]], bounds: [-23, 23, -23, 23], solo: [0, 17, 0], dc: [0, 12],
+    { name: 'Chợ đêm', seed: 777123, build: buildMarket, amb: 1.6, air: [[-22, 22, -22, 22]], bounds: [-23, 23, -23, 23], solo: [0, 17, 0], dc: [0, 12], tsp: [[[-19, -19], [0, -19], [-19.6, .7], [-10, -19.5]], [[19, 19], [0, 19], [19.5, 12], [10, 19.5]]],
       spawns: [[-19, -19], [19, -19], [-19, 19], [19, 19], [0, -19], [0, 19], [-19, 0], [10, 0]],
       fly(t) { const a = t * .05 + 1; camera.position.set(Math.cos(a) * 15, 5 + Math.sin(t * .13) * .6, Math.sin(a) * 15); camera.lookAt(0, 2, 0); } },
-    { name: 'Công trường', seed: 4242, build: buildSite, amb: 2.2, neonPri: [2, 3, 4, 5, 6, 0, 1], air: [[0, 26, -20, 20], [-26, 26, 13, 20], [-26, 26, -20, -13]], bounds: [-27, 27, -21, 21], solo: [14, 15, .75], dc: [12, 4],
+    { name: 'Công trường', seed: 4242, build: buildSite, amb: 2.2, neonPri: [2, 3, 4, 5, 6, 0, 1], air: [[0, 26, -20, 20], [-26, 26, 13, 20], [-26, 26, -20, -13]], bounds: [-27, 27, -21, 21], solo: [14, 15, .75], dc: [12, 4], tsp: [[[23, -17], [23, 17], [21, -2], [16, 10]], [[-23, -17], [-23, 17], [-11, -9], [-11, 9]]],
       spawns: [[-23, -17], [23, -17], [-23, 17], [23, 17], [10, 2], [-11, -9], [-11, 9], [21, -2]],
       fly(t) { const a = t * .05 + 2.2; camera.position.set(4 + Math.cos(a) * 19, 7 + Math.sin(t * .13) * .6, Math.sin(a) * 16); camera.lookAt(-2, 2.5, 0); } }
   ];
@@ -1280,6 +1308,11 @@
   let mode = 'solo', ws = null, online = false, ready = false, myId = null, nick = 'Khách', lanAddr = '';
   let dead = false, respawnT = 0, myK = 0, myD = 0, lastHurtBy = null, presT = 0, shotEmitT = 0, boardT = 0, boardKey = '';
   let rooms = [], room = null, matchEnd = 0, gestureAt = -1e9, ghost = false, lastBeep = 0;
+  let myTeam = -1, teamScore = [0, 0], crouchK = 0, crouchTog = false, scoreOn = false;
+  const TEAMS = [{ n: 'Công an', cls: 'tA' }, { n: 'Tội phạm', cls: 'tB' }];
+  const teamMode = () => !!room && room.mode === 'team';
+  const teamOf = id => { if (!teamMode()) return -1; const p = room.players.find(o => o.id === id); return p ? p.team : -1; };
+  const isFoe = r => !teamMode() || r.team !== myTeam;
   const inMatch = () => mode === 'pvp' && (state === 'play' || state === 'pause');
   const mmss = ms => { const sec = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); };
   const remotes = new Map(), PARTS = [[.42, .3, 1], [.9, .3, 1], [1.28, .32, 1], [1.64, .19, 1.6]], PVP_DMG = .75;
@@ -1355,7 +1388,7 @@
   function updateHud() {
     if (mode === 'pvp') {
       setTxt('objLabel', room ? room.name : 'Đấu nhiều người'); setTxt('scoreTxt', myK + ' hạ'); setTxt('leftTxt', myD + ' lần chết · ' + (remotes.size + 1) + ' người');
-      const left = matchEnd - performance.now(), sec = Math.ceil(left / 1000); setTxt('timer', mmss(left)); $('timer').classList.toggle('low', sec <= 10);
+      const left = matchEnd - performance.now(), sec = Math.ceil(left / 1000); setTxt('tmTxt', mmss(left)); $('tmTxt').classList.toggle('tB', sec <= 10); setTxt('scA', String(teamScore[0])); setTxt('scB', String(teamScore[1]));
       if (sec <= 10 && sec > 0 && sec !== lastBeep) { lastBeep = sec; tone(880, .08, 'square', .05); }
     }
     else { setTxt('objLabel', 'Đợt ' + wave); setTxt('scoreTxt', fmt(score)); const left = enemies.length + queue.length; setTxt('leftTxt', left ? 'Còn ' + left + ' mục tiêu' : 'Hẻm tạm yên'); }
@@ -1387,12 +1420,20 @@
     initAudio(); clearWorld();
     P.pos.set(MAP.solo[0], 0, MAP.solo[1]); P.vel.set(0, 0, 0); P.vy = 0; P.yaw = MAP.solo[2]; P.pitch = 0; P.hp = 100; P.recoil = P.recoilYaw = 0; P.since = 9;
     for (const w of WEAPONS) w.ammo = w.mag; equip(0); cd = 0; reloadT = 0; firing = false; ads = false; $('adsBtn').setAttribute('aria-pressed', 'false');
-    score = 0; kills = 0; interT = 0; hurtT = 0; dmgT = 0; keys.clear(); joyX = joyY = 0;
+    score = 0; kills = 0; interT = 0; hurtT = 0; dmgT = 0; keys.clear(); joyX = joyY = 0; crouchK = 0; crouchTog = false; $('crouchBtn').setAttribute('aria-pressed', 'false');
     vm.visible = true; state = 'play'; show(null);
     $('board').hidden = mode !== 'pvp'; $('timer').hidden = mode !== 'pvp'; $('restartBtn').hidden = mode === 'pvp'; $('resumeBtn').textContent = 'Chơi tiếp';
-    if (mode === 'pvp') enterPvp(); else startWave(1);
-    if (!touchMode && !noLock) lock();
+    if (mode === 'pvp') enterPvp(); else { myTeam = -1; dressArms(); startWave(1); }
+    if (!touchMode && !noLock) { lock(); goFull(); }
   }
+  function goFull() { // toàn màn hình rồi khóa phím: nhờ vậy giữ Ctrl để ngồi mà bấm W không đóng thẻ trình duyệt (Chrome, Edge)
+    if (document.fullscreenElement || !stage.requestFullscreen) return;
+    try {
+      const pr = stage.requestFullscreen({ navigationUI: 'hide' });
+      if (pr && pr.then) pr.then(() => { if (navigator.keyboard && navigator.keyboard.lock) navigator.keyboard.lock(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyR', 'KeyC', 'Tab', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8']).catch(() => {}); }).catch(() => {});
+    } catch (e) {}
+  }
+  addEventListener('beforeunload', e => { if (state === 'play' || state === 'pause') { e.preventDefault(); e.returnValue = ''; } });
   function lock() { if (dragLook) return; try { const p = view.requestPointerLock(); if (p && p.catch) p.catch(lockFailed); } catch (e) { lockFailed(); } view.focus(); }
   function lockFailed() {
     if (lockWorked) { if (state === 'play') pause('Chưa khóa được chuột. Bấm Chơi tiếp lần nữa.'); return; }
@@ -1402,10 +1443,10 @@
   document.addEventListener('pointerlockerror', lockFailed);
   function pause(note) {
     if (state !== 'play') return; state = 'pause'; firing = false; keys.clear();
-    $('pauseNote').textContent = note || (mode === 'pvp' ? 'Trận vẫn chạy, đứng yên vẫn bị bắn.' : touchMode || dragLook ? 'Ván chơi đang dừng.' : 'Bấm Chơi tiếp để khóa chuột lại.'); $('lobbyBtn').textContent = mode === 'pvp' ? 'Rời phòng' : 'Về sảnh'; show('pause');
+    $('pauseNote').textContent = note || (mode === 'pvp' ? 'Trận vẫn chạy, đứng yên vẫn bị bắn.' : touchMode || dragLook ? 'Ván chơi đang dừng.' : 'Bấm Chơi tiếp để khóa chuột lại.'); $('lobbyBtn').textContent = mode === 'pvp' ? 'Rời phòng' : 'Về sảnh'; $('teamBtn').hidden = !(mode === 'pvp' && teamMode()); showScore(false); show('pause');
     if (document.pointerLockElement) document.exitPointerLock();
   }
-  function resume() { if (state !== 'pause') return; state = 'play'; show(null); initAudio(); $('resumeBtn').textContent = 'Chơi tiếp'; if (ghost) { ghost = false; respawnT = 0; } if (!touchMode) lock(); }
+  function resume() { if (state !== 'pause') return; state = 'play'; show(null); initAudio(); $('resumeBtn').textContent = 'Chơi tiếp'; if (ghost) { ghost = false; respawnT = 0; } if (!touchMode) { lock(); goFull(); } }
   function gameOver() {
     state = 'over'; firing = false; vm.visible = false; if (document.pointerLockElement) document.exitPointerLock();
     const isBest = score > best; if (isBest) { best = Math.floor(score); try { localStorage.setItem('hm-best', String(best)); } catch (e) {} }
@@ -1447,7 +1488,7 @@
     if (touchMode) {
       let bestA = .08, tx = 0, ty = 0, tz = 0, got = false;
       for (const e of enemies) { v1.copy(e.pos).sub(o); const d = v1.length(), a = Math.acos(clamp(v1.dot(fwd) / d, -1, 1)); if (a < bestA) { bestA = a; tx = e.pos.x; ty = e.pos.y; tz = e.pos.z; got = true; } }
-      if (mode === 'pvp') for (const r of remotes.values()) { if (!r.alive) continue; v1.set(r.g.position.x, r.g.position.y + 1.1, r.g.position.z).sub(o); const d = v1.length(), a = Math.acos(clamp(v1.dot(fwd) / d, -1, 1)); if (a < bestA) { bestA = a; tx = r.g.position.x; ty = r.g.position.y + 1.1; tz = r.g.position.z; got = true; } }
+      if (mode === 'pvp') for (const r of remotes.values()) { if (!r.alive || !isFoe(r)) continue; v1.set(r.g.position.x, r.g.position.y + 1.1, r.g.position.z).sub(o); const d = v1.length(), a = Math.acos(clamp(v1.dot(fwd) / d, -1, 1)); if (a < bestA) { bestA = a; tx = r.g.position.x; ty = r.g.position.y + 1.1; tz = r.g.position.z; got = true; } }
       if (got) { fwd.set(tx, ty, tz).sub(o).normalize(); right.crossVectors(fwd, UP).normalize(); upv.crossVectors(right, fwd); }
     }
     if (w.proj) { // đạn bay có thời gian: tên lửa bay thẳng, lựu đạn bay cầu vồng
@@ -1460,7 +1501,7 @@
       P.recoil += w.kick; vmKick = w.vk; sfx.shot(cur, 1); return;
     }
     gun.updateMatrixWorld(true); v5.set(0, w.my, w.mz); gun.localToWorld(v5);
-    const spread = lerp(w.hip, w.adsS, adsK) + bloomS + Math.hypot(P.vel.x, P.vel.z) * .0012 * (1 - adsK) + (P.ground ? 0 : .02);
+    const spread = (lerp(w.hip, w.adsS, adsK) + bloomS + Math.hypot(P.vel.x, P.vel.z) * .0012 * (1 - adsK) + (P.ground ? 0 : .02)) * (1 - crouchK * .4); // ngồi bắn chụm hơn
     let anyHit = false, head = false; acc.clear();
     for (let p = 0; p < w.pellets; p++) {
       const a = rnd(0, TAU), s = Math.sqrt(Math.random()) * spread;
@@ -1469,9 +1510,9 @@
       let dist = hits.length ? hits[0].distance : 150, target = null, rt = null, mult = 1;
       for (const e of enemies) { v2.copy(e.pos).sub(o); const tca = v2.dot(v1); if (tca < 0) continue; const rr = e.r * 1.1, d2 = v2.lengthSq() - tca * tca; if (d2 > rr * rr) continue; const t = tca - Math.sqrt(rr * rr - d2); if (t < dist) { dist = t; target = e; } }
       if (mode === 'pvp') for (const r of remotes.values()) {
-        if (!r.alive) continue;
+        if (!r.alive || !isFoe(r)) continue;
         for (const pt of PARTS) {
-          v2.set(r.g.position.x, r.g.position.y + pt[0], r.g.position.z).sub(o); const tca = v2.dot(v1); if (tca < 0) continue;
+          v2.set(r.g.position.x, r.g.position.y + pt[0] * (1 - r.cr * .3), r.g.position.z).sub(o); const tca = v2.dot(v1); if (tca < 0) continue;
           const d2 = v2.lengthSq() - tca * tca; if (d2 > pt[1] * pt[1]) continue;
           const t = tca - Math.sqrt(pt[1] * pt[1] - d2); if (t < dist) { dist = t; rt = r; mult = pt[2]; target = null; }
         }
@@ -1524,7 +1565,7 @@
     let any = false;
     for (const e of enemies.slice()) { const d = e.pos.distanceTo(pos) - e.r; if (d < c.R && !e.decor) { e.hp -= c.dmg * clamp(1 - d / c.R, 0, 1); e.pop = 1; any = true; if (e.hp <= 0) killEnemy(e); } }
     if (mode === 'pvp') for (const r of remotes.values()) {
-      if (!r.alive) continue; const d = Math.hypot(r.g.position.x - pos.x, r.g.position.y + 1 - pos.y, r.g.position.z - pos.z);
+      if (!r.alive || !isFoe(r)) continue; const d = Math.hypot(r.g.position.x - pos.x, r.g.position.y + 1 - pos.y, r.g.position.z - pos.z);
       if (d < c.R) { any = true; net({ t: 'hit', to: r.id, d: Math.max(1, Math.round(c.dmg * PVP_DMG * (1 - d / c.R))) }); }
     }
     if (any) { hitT = .12; tone(1500, .04, 'square', .04); }
@@ -1542,8 +1583,8 @@
         p.addScaledVector(r.vel, dt); v2.copy(p).add(v1); r.g.lookAt(v2); v3.copy(p);
         for (const e of enemies) if (!e.decor && e.pos.distanceTo(p) < e.r + .3) { hit = true; break; }
         if (!hit && mode === 'pvp') {
-          for (const o of remotes.values()) { if (!o.alive || o.id === r.from) continue; const q2 = o.g.position, dy = p.y - clamp(p.y, q2.y + .2, q2.y + 1.7); if ((p.x - q2.x) ** 2 + (p.z - q2.z) ** 2 + dy * dy < .3) { hit = true; break; } }
-          if (!hit && !r.own && !dead) { const dy = p.y - clamp(p.y, P.pos.y + .2, P.pos.y + 1.7); if ((p.x - P.pos.x) ** 2 + (p.z - P.pos.z) ** 2 + dy * dy < .3) hit = true; }
+          for (const o of remotes.values()) { if (!o.alive || o.id === r.from || (r.own && !isFoe(o))) continue; const q2 = o.g.position, dy = p.y - clamp(p.y, q2.y + .2, q2.y + 1.7); if ((p.x - q2.x) ** 2 + (p.z - q2.z) ** 2 + dy * dy < .3) { hit = true; break; } }
+          if (!hit && !r.own && !dead) { const dy = p.y - clamp(p.y, P.pos.y + .2, P.pos.y + 1.7 - crouchK * .55); if ((p.x - P.pos.x) ** 2 + (p.z - P.pos.z) ** 2 + dy * dy < .3) hit = true; }
         }
         if (!hit && (r.life <= 0 || p.y < .05)) hit = true;
       }
@@ -1560,8 +1601,10 @@
     if (keys.has('KeyW') || keys.has('ArrowUp')) f++; if (keys.has('KeyS') || keys.has('ArrowDown')) f--; if (keys.has('KeyD') || keys.has('ArrowRight')) s++; if (keys.has('KeyA') || keys.has('ArrowLeft')) s--;
     if (touchMode) { s = joyX; f = -joyY; }
     const l = Math.hypot(f, s); if (l > 1) { f /= l; s /= l; }
-    const sprint = (keys.has('ShiftLeft') || keys.has('ShiftRight') || (touchMode && l > .95)) && f > .3 && !ads && reloadT <= 0;
-    const sp = sprint ? 7.6 : ads ? 3.2 : 5.2, sn = Math.sin(P.yaw), cs = Math.cos(P.yaw);
+    const crouch = (keys.has('ControlLeft') || keys.has('ControlRight') || keys.has('KeyC') || crouchTog) && P.ground;
+    const sprint = (keys.has('ShiftLeft') || keys.has('ShiftRight') || (touchMode && l > .95)) && f > .3 && !ads && !crouch && reloadT <= 0;
+    crouchK += ((crouch ? 1 : 0) - crouchK) * Math.min(1, dt * 12);
+    const sp = sprint ? 7.6 : crouch ? 2.7 : ads ? 3.2 : 5.2, sn = Math.sin(P.yaw), cs = Math.cos(P.yaw);
     const k = Math.min(1, dt * (P.ground ? 11 : 2.5));
     P.vel.x += ((-sn * f + cs * s) * sp - P.vel.x) * k; P.vel.z += ((-cs * f - sn * s) * sp - P.vel.z) * k;
     if ((keys.has('Space') || wantJump) && P.ground) { P.vy = 6.2; P.ground = false; } wantJump = false;
@@ -1573,7 +1616,7 @@
     P.land = Math.max(0, P.land - dt * 5); P.since += dt; if (P.since > 5 && P.hp < 100) P.hp = Math.min(100, P.hp + 12 * dt);
     P.recoil = Math.max(0, P.recoil - dt * (.06 + P.recoil * 7)); P.recoilYaw *= Math.max(0, 1 - dt * 7); bloomS = Math.max(0, bloomS - dt * .035);
     const bobK = reduced ? 0 : Math.min(1, moving / 5) * (1 - adsK * .8);
-    camera.position.set(P.pos.x, P.pos.y + 1.66 + Math.sin(P.bob * 2) * .028 * bobK - P.land * .09, P.pos.z);
+    camera.position.set(P.pos.x, P.pos.y + 1.66 - crouchK * .58 + Math.sin(P.bob * 2) * .028 * bobK - P.land * .09, P.pos.z);
     const shk = reduced ? 0 : shake * .022;
     camera.rotation.set(clamp(P.pitch + P.recoil + rnd(-1, 1) * shk, -1.5, 1.5), P.yaw + P.recoilYaw + rnd(-1, 1) * shk, (reduced ? 0 : Math.cos(P.bob) * .004 * bobK) + rnd(-1, 1) * shk);
     cd -= dt; if (reloadT > 0) { reloadT -= dt; if (reloadT <= 0) { GUN.ammo = GUN.mag; noise(.05, 3500, 1200, .16); tone(420, .04, 'square', .05); } }
@@ -1638,7 +1681,7 @@
   function updateBolts(dt) {
     for (let i = bolts.length - 1; i >= 0; i--) {
       const b = bolts[i], p = b.m.position; p.addScaledVector(b.vel, dt); b.life -= dt;
-      const dx = p.x - P.pos.x, dz = p.z - P.pos.z, py = clamp(p.y, P.pos.y + .2, P.pos.y + 1.7), dy = p.y - py; let gone = b.life <= 0;
+      const dx = p.x - P.pos.x, dz = p.z - P.pos.z, py = clamp(p.y, P.pos.y + .2, P.pos.y + 1.7 - crouchK * .55), dy = p.y - py; let gone = b.life <= 0;
       if (dx * dx + dz * dz + dy * dy < .28) { hurt(b.dmg, b.from); gone = true; puff(p.x, p.y, p.z, 10, C_FIRE, 3, 0, .3); }
       else if (insideSolid(p.x, p.y, p.z)) { gone = true; puff(p.x, p.y, p.z, 10, C_SPARK, 4, 1, .4); if (p.y < .1) puff(p.x, .05, p.z, 8, C_WATER, 2.5, 2.5, .4); noise(.08, 2400, 500, clamp(.2 - p.distanceTo(camera.position) * .006, 0, .2), 'bandpass', .4); }
       if (gone) { scene.remove(b.m); bolts.splice(i, 1); }
@@ -1694,6 +1737,13 @@
     dark: std({ color: 0x121416, roughness: .75 }), boot: std({ color: 0x2b231c, roughness: .7 }), skin: std({ color: 0xc99a78, roughness: .65 }),
     helmet: std({ map: camoTex, color: 0x8a8a8a, roughness: .8 }), glass: M.glass, gun: GM2, metal: GM
   };
+  SM.tag = SM.vest;
+  const tagTex = (() => { const c = mkCanvas(256, 84), g = c.getContext('2d'); g.fillStyle = '#0f1a30'; g.fillRect(0, 0, 256, 84); g.fillStyle = '#f2f5f8'; g.font = '800 60px "Saira Condensed", system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('CÔNG AN', 128, 46); return texOf(c, true, false); })();
+  const vestB = std({ color: 0x4a3524, roughness: .8 });
+  const TM = [ // phe Công an: đồng phục xanh đen, áo giáp đen có chữ; phe Tội phạm: đồ tối màu, áo ngực da nâu, mũ len đỏ sẫm
+    Object.assign({}, SM, { camo: std({ color: 0x1b2742, roughness: .85 }), vest: std({ color: 0x0e1014, roughness: .8 }), helmet: std({ color: 0x16203a, roughness: .45 }), id: std({ color: 0x3d8bff, roughness: .6, emissive: 0x3d8bff, emissiveIntensity: .55 }), tag: std({ map: tagTex, emissive: 0xffffff, emissiveMap: tagTex, emissiveIntensity: .5, roughness: .7 }) }),
+    Object.assign({}, SM, { camo: std({ color: 0x25252a, roughness: .92 }), vest: vestB, helmet: std({ color: 0x5a1c1c, roughness: .95 }), id: std({ color: 0xff4b3e, roughness: .6, emissive: 0xff4b3e, emissiveIntensity: .55 }), tag: vestB })
+  ];
   const IDM = [0xffc928, 0x3d8bff, 0xff4b3e, 0x35d07f, 0xb26bff, 0xff8a2a].map(c => std({ color: c, roughness: .6, emissive: c, emissiveIntensity: .35 }));
   const WLEN = [1, .76, 1.06, 1.34, .46, 1.25, 1.15, .8];
   function mergeGeos(list) {
@@ -1742,6 +1792,7 @@
     put('spine', 'vest', box(.17, .07, .035), 0, .4, .16); put('spine', 'dark', box(.05, .12, .06), .195, .23, -.02); seg('spine', 'dark', [.195, .28, -.03], [.21, .66, -.07], .005, .003);
     put('spine', 'vest', box(.27, .34, .13), 0, .3, -.195); put('spine', 'vest', box(.275, .05, .14), 0, .485, -.195); put('spine', 'camo', new T.CylinderGeometry(.055, .055, .31, 10), 0, .1, -.215, 0, 0, PI / 2);
     for (const sx of [-1, 1]) put('spine', 'vest', box(.05, .18, .1), sx * .16, .25, -.195);
+    put('spine', 'tag', box(.2, .066, .012), 0, .37, -.264); put('spine', 'tag', box(.15, .05, .012), 0, .4, .181);
     put('spine', 'id', box(.2, .035, .012), 0, .44, -.264); for (const sx of [-1, 1]) put('spine', 'id', box(.012, .07, .07), sx * .306, .46, 0);
     seg('spine', 'dark', [0, .49, 0], [0, .61, 0], .06, .056);
     // tay phải nắm báng, tay trái đỡ ốp lót
@@ -1764,12 +1815,12 @@
     return out;
   })();
   const rFlashMat = new T.SpriteMaterial({ map: flashMat.map, transparent: true, blending: T.AdditiveBlending, depthWrite: false }); rFlashMat.color.setRGB(5, 3.6, 2);
-  function makeRemote(id) {
-    let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  function makeRemote(id, team) {
+    const mats = team >= 0 ? TM[team] : SM; let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
     const g = new T.Group(), idMat = IDM[h % IDM.length]; g.rotation.order = 'YXZ';
     const bone = (par, name, x, y, z) => {
       const b = new T.Group(); b.position.set(x, y, z); par.add(b);
-      for (const [geo, mk] of SOLDIER[name] || []) { const m = new T.Mesh(geo, mk === 'id' ? idMat : SM[mk]); m.castShadow = true; m.receiveShadow = true; b.add(m); }
+      for (const [geo, mk] of SOLDIER[name] || []) { const m = new T.Mesh(geo, mk === 'id' && team < 0 ? idMat : mats[mk]); m.castShadow = true; m.receiveShadow = true; b.add(m); }
       return b;
     };
     const hips = bone(g, 'hips', 0, .93, 0), legL = bone(hips, 'legL', .1, 0, 0), legR = bone(hips, 'legR', -.1, 0, 0), shinL = bone(legL, 'shin', 0, -.43, 0), shinR = bone(legR, 'shin', 0, -.43, 0);
@@ -1778,11 +1829,11 @@
     const fl = new T.Sprite(rFlashMat); fl.scale.set(.5, .5, 1); fl.visible = false; muzzle.add(fl);
     const c = mkCanvas(256, 64), tex = new T.CanvasTexture(c), sp = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false }));
     sp.scale.set(1.8, .45, 1); sp.position.y = 2.12; g.add(sp); g.visible = false; scene.add(g);
-    return { id, g, c, tex, sp, hips, legL, legR, shinL, shinR, spine, head, gunB, muzzle, fl, nick: '', alive: false, k: 0, d: 0, tx: 0, ty: 0, tz: 0, tyaw: 0, yaw: 0, gy: 0, spd: 0, ph: 0, pt: 0, tpt: 0, w: 0, deadT: 9, flashT: 0 };
+    return { id, g, c, tex, sp, hips, legL, legR, shinL, shinR, spine, head, gunB, muzzle, fl, nick: '', alive: false, k: 0, d: 0, tx: 0, ty: 0, tz: 0, tyaw: 0, yaw: 0, gy: 0, spd: 0, ph: 0, pt: 0, tpt: 0, w: 0, deadT: 9, flashT: 0, team, cr: 0, tcr: 0 };
   }
   function setLabel(r) {
     const x = r.c.getContext('2d'); x.clearRect(0, 0, 256, 64); x.font = '800 34px "Saira Condensed", system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-    x.lineWidth = 6; x.strokeStyle = 'rgba(4,6,10,.9)'; x.strokeText(r.nick, 128, 34); x.fillStyle = '#eef2f6'; x.fillText(r.nick, 128, 34); r.tex.needsUpdate = true;
+    x.lineWidth = 6; x.strokeStyle = 'rgba(4,6,10,.9)'; x.strokeText(r.nick, 128, 34); x.fillStyle = !teamMode() ? '#eef2f6' : isFoe(r) ? '#ff9a8e' : '#8fd0ff'; x.fillText(r.nick, 128, 34); r.tex.needsUpdate = true;
   }
   function dropRemote(id) { const r = remotes.get(id); if (r) { scene.remove(r.g); remotes.delete(id); } }
   function clearRemotes() { for (const r of remotes.values()) scene.remove(r.g); remotes.clear(); }
@@ -1790,8 +1841,8 @@
     if (typeof id !== 'string' || id === myId || !inMatch()) return;
     if (!s || s.m !== 'pvp' || ![s.x, s.y, s.z, s.yw].every(Number.isFinite)) { dropRemote(id); return; }
     let r = remotes.get(id);
-    if (!r) { r = makeRemote(id); remotes.set(id, r); r.g.position.set(s.x, clamp(s.y, 0, 6), s.z); r.gy = r.g.position.y; r.yaw = s.yw; }
-    r.tx = clamp(s.x, MAP.bounds[0], MAP.bounds[1]); r.ty = clamp(s.y, 0, 6); r.tz = clamp(s.z, MAP.bounds[2], MAP.bounds[3]); r.tyaw = s.yw; r.alive = s.a === 1; r.k = s.k | 0; r.d = s.d | 0; r.tpt = clamp(+s.pt || 0, -1.5, 1.5);
+    if (!r) { r = makeRemote(id, teamOf(id)); remotes.set(id, r); r.g.position.set(s.x, clamp(s.y, 0, 6), s.z); r.gy = r.g.position.y; r.yaw = s.yw; }
+    r.tx = clamp(s.x, MAP.bounds[0], MAP.bounds[1]); r.ty = clamp(s.y, 0, 6); r.tz = clamp(s.z, MAP.bounds[2], MAP.bounds[3]); r.tyaw = s.yw; r.alive = s.a === 1; r.k = s.k | 0; r.d = s.d | 0; r.tpt = clamp(+s.pt || 0, -1.5, 1.5); r.tcr = s.c ? 1 : 0;
     const wi = clamp(s.w | 0, 0, WLEN.length - 1); if (wi !== r.w) { r.w = wi; r.gunB.scale.z = WLEN[wi]; }
     const n = String(s.n == null ? '' : s.n).slice(0, 12).trim() || 'Khách'; if (n !== r.nick) { r.nick = n; setLabel(r); }
   }
@@ -1801,17 +1852,21 @@
       : !online ? 'Đang nối máy chủ…'
       : (rooms.length ? rooms.length + ' phòng đang mở.' : 'Đã nối máy chủ. Chưa có phòng nào.') + (lanAddr ? SHARE + lanAddr : '');
   }
-  function sendState() { if (inMatch()) net({ t: 's', x: r2(P.pos.x), y: r2(P.pos.y), z: r2(P.pos.z), yw: r2(P.yaw), pt: r2(P.pitch), w: cur, a: dead ? 0 : 1, k: myK, d: myD }); }
+  function sendState() { if (inMatch()) net({ t: 's', x: r2(P.pos.x), y: r2(P.pos.y), z: r2(P.pos.z), yw: r2(P.yaw), pt: r2(P.pitch), w: cur, c: crouchK > .5 ? 1 : 0, a: dead ? 0 : 1, k: myK, d: myD }); }
   function respawn() {
-    let bestS = MAP.spawns[0], bestD = -1;
-    for (const s of MAP.spawns) { let d = 999; for (const r of remotes.values()) if (r.alive) d = Math.min(d, Math.hypot(r.g.position.x - s[0], r.g.position.z - s[1])); d += Math.random() * 5; if (d > bestD) { bestD = d; bestS = s; } }
+    const list = teamMode() && myTeam >= 0 ? MAP.tsp[myTeam] : MAP.spawns; let bestS = list[0], bestD = -1;
+    for (const s of list) { let d = 999; for (const r of remotes.values()) if (r.alive && isFoe(r)) d = Math.min(d, Math.hypot(r.g.position.x - s[0], r.g.position.z - s[1])); d += Math.random() * 5; if (d > bestD) { bestD = d; bestS = s; } }
     P.pos.set(bestS[0], 0, bestS[1]); resolve(P.pos, .42); P.vel.set(0, 0, 0); P.vy = 0; P.pitch = 0; P.recoil = P.recoilYaw = 0; P.hp = 100; P.since = 9;
     P.yaw = Math.atan2(P.pos.x - (MAP.bounds[0] + MAP.bounds[1]) / 2, P.pos.z - (MAP.bounds[2] + MAP.bounds[3]) / 2); // quay mặt về giữa bản đồ
     for (const w of WEAPONS) w.ammo = w.mag; reloadT = 0; dead = false; vm.visible = true; sendState();
   }
+  function dressArms() { // tay áo góc nhìn thứ nhất theo phe
+    const t = mode === 'pvp' ? myTeam : -1; SLV.map = t < 0 ? camoTex : null; SLV.color.set(t === 0 ? 0x1b2742 : t === 1 ? 0x25252a : 0xb0b0b0); SLV.needsUpdate = true;
+  }
   function enterPvp() {
-    myK = 0; myD = 0; lastHurtBy = null; boardKey = ''; lastBeep = 0; if (humGain) humGain.gain.value = 0; respawn();
-    banner(room ? room.name : 'Vào sân', room ? 'Trận ' + room.dur + ' phút. Ai hạ nhiều nhất thắng' : '');
+    myK = 0; myD = 0; lastHurtBy = null; boardKey = ''; lastBeep = 0; teamScore = [0, 0]; if (humGain) humGain.gain.value = 0;
+    myTeam = teamOf(myId); $('scA').hidden = $('scB').hidden = !teamMode(); dressArms(); respawn();
+    banner(teamMode() && myTeam >= 0 ? 'Phe ' + TEAMS[myTeam].n : room ? room.name : 'Vào sân', room ? 'Trận ' + room.dur + ' phút. ' + (teamMode() ? 'Phe nào hạ nhiều hơn thì thắng' : 'Ai hạ nhiều nhất thắng') : '');
   }
   function pvpHurt(d, from) {
     P.hp -= d; hurtT = .5; P.since = 0; tone(110, .22, 'sawtooth', .12, .5, .3); noise(.12, 900, 200, .2);
@@ -1822,7 +1877,7 @@
     banner('Bị ' + (by ? by.nick : 'đối thủ') + ' hạ', 'Hồi sinh sau 3 giây'); sfx.boom(false); sendState();
   }
   function onHit(m) {
-    const r = remotes.get(m.from); if (!inMatch() || dead || !r) return;
+    const r = remotes.get(m.from); if (!inMatch() || dead || !r || !isFoe(r)) return;
     const dmg = clamp(+m.d || 0, 0, 200); if (!dmg) return; lastHurtBy = m.from; pvpHurt(dmg, r.g.position);
   }
   function onShot(m) {
@@ -1841,12 +1896,37 @@
     if (r) { puff(r.g.position.x, r.g.position.y + 1, r.g.position.z, 24, C_EMBER, 4, 2, .8, 5); smoke(r.g.position.x, r.g.position.y + 1, r.g.position.z, 1.4, 1.4, .3); }
     if (m.by === myId) { myK++; banner('Hạ ' + (r ? r.nick : 'đối thủ')); tone(660, .1, 'triangle', .08); setTimeout(() => tone(990, .16, 'triangle', .08), 90); }
   }
-  function updateBoard() {
-    const rows = [{ n: nick + ' (mày)', k: myK, d: myD, me: 1 }]; for (const r of remotes.values()) rows.push({ n: r.nick, k: r.k, d: r.d });
-    rows.sort((a, b) => b.k - a.k || a.d - b.d); const key = JSON.stringify(rows); if (key === boardKey) return; boardKey = key;
-    const b = $('board'); b.textContent = '';
-    for (const r of rows.slice(0, 6)) { const li = document.createElement('li'), s = document.createElement('span'), v = document.createElement('b'); s.textContent = r.n; v.textContent = r.k + ' / ' + r.d; if (r.me) li.className = 'me'; li.append(s, v); b.append(li); }
+  function allPlayers() { // mọi người trong trận, kể cả mình, xếp theo số lần hạ
+    const rows = [{ n: nick + ' (mày)', k: myK, d: myD, me: 1, team: myTeam }]; for (const r of remotes.values()) rows.push({ n: r.nick, k: r.k, d: r.d, team: r.team });
+    return rows.sort((a, b) => b.k - a.k || a.d - b.d);
   }
+  function updateBoard() {
+    const rows = allPlayers(), key = JSON.stringify(rows); if (key === boardKey) return; boardKey = key;
+    const b = $('board'); b.textContent = '';
+    for (const r of rows.slice(0, 6)) { const li = document.createElement('li'), sp = document.createElement('span'), v = document.createElement('b'); sp.textContent = r.n; v.textContent = r.k + ' / ' + r.d; li.className = (r.me ? 'me ' : '') + (r.team >= 0 ? TEAMS[r.team].cls : ''); li.append(sp, v); b.append(li); }
+    if (scoreOn) renderScore();
+  }
+  function renderScore() { // bảng thành tích đầy đủ, giữ Tab để xem
+    const cols = $('scCols'); cols.textContent = '';
+    const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt !== undefined) e.textContent = txt; return e; };
+    const column = (title, cls, total, rows) => {
+      const c = el('div', 'sc-col'), h = el('h4', cls); h.append(el('span', '', title), el('span', '', total)); c.append(h);
+      const hd = el('div', 'sc-row head'); hd.append(el('span', '', 'Người chơi'), el('b', '', 'Hạ'), el('b', '', 'Chết')); c.append(hd);
+      for (const r of rows) { const row = el('div', 'sc-row' + (r.me ? ' me' : '')); row.append(el('span', '', r.n), el('b', '', String(r.k)), el('b', '', String(r.d))); c.append(row); }
+      if (!rows.length) c.append(el('div', 'sc-row', 'Chưa có ai'));
+      cols.append(c);
+    };
+    if (mode !== 'pvp') {
+      $('scTitle').textContent = 'Chơi đơn · ' + MAP.name;
+      column('Thành tích', '', 'Đợt ' + wave, [{ n: 'Điểm ' + fmt(score), k: kills, d: 0, me: 1 }]);
+    } else {
+      $('scTitle').textContent = (room ? room.name : 'Trận đấu') + ' · ' + MAP.name + ' · còn ' + mmss(matchEnd - performance.now());
+      const rows = allPlayers();
+      if (teamMode()) for (const t of [0, 1]) column(TEAMS[t].n, TEAMS[t].cls, teamScore[t] + ' điểm', rows.filter(r => r.team === t));
+      else column('Đấu tự do', '', rows.length + ' người', rows);
+    }
+  }
+  function showScore(on) { scoreOn = on; $('score').hidden = !on; if (on) renderScore(); }
   function updatePvp(dt) {
     if (dead && !ghost) { respawnT -= dt; if (respawnT <= 0) respawn(); }
     const k = Math.min(1, dt * 14);
@@ -1856,10 +1936,11 @@
       // dáng chạy: chân đánh theo quãng đường thật, gối gập lúc chân vung tới, người nhún và hơi chúi
       r.spd += (Math.hypot(p.x - ox, p.z - oz) / Math.max(dt, .001) - r.spd) * Math.min(1, dt * 10);
       const amp = clamp(r.spd / 5, 0, 1), air = clamp(r.gy / .5, 0, 1); r.ph += r.spd * dt * 2.1; const sn = Math.sin(r.ph), cs = Math.cos(r.ph);
-      r.legL.rotation.x = -sn * .78 * amp - air * .5; r.legR.rotation.x = sn * .78 * amp - air * .25;
-      r.shinL.rotation.x = Math.max(0, cs) * 1.05 * amp + air * .9; r.shinR.rotation.x = Math.max(0, -cs) * 1.05 * amp + air * .6;
-      r.hips.position.y = .93 - Math.abs(sn) * .035 * amp; r.hips.rotation.y = sn * .08 * amp;
-      r.pt += (r.tpt - r.pt) * k; r.spine.rotation.x = -r.pt * .55 + amp * .12; r.spine.rotation.y = -sn * .1 * amp; r.head.rotation.x = -r.pt * .35;
+      r.cr += (r.tcr - r.cr) * k;
+      r.legL.rotation.x = -sn * .78 * amp - air * .5 - r.cr * 1.1; r.legR.rotation.x = sn * .78 * amp - air * .25 - r.cr * 1.1;
+      r.shinL.rotation.x = Math.max(0, cs) * 1.05 * amp + air * .9 + r.cr * 1.9; r.shinR.rotation.x = Math.max(0, -cs) * 1.05 * amp + air * .6 + r.cr * 1.9;
+      r.hips.position.y = .93 - Math.abs(sn) * .035 * amp - r.cr * .37; r.hips.rotation.y = sn * .08 * amp;
+      r.pt += (r.tpt - r.pt) * k; r.spine.rotation.x = -r.pt * .55 + amp * .12 + r.cr * .22; r.spine.rotation.y = -sn * .1 * amp; r.head.rotation.x = -r.pt * .35;
       if (r.alive) { r.deadT = -1; r.g.rotation.x = 0; p.y = r.gy; r.g.visible = true; r.sp.visible = true; }
       else { // bị hạ: ngã ngửa ra sau rồi biến mất trước khi hồi sinh
         if (r.deadT < 0) r.deadT = 0; r.deadT += dt; const f = smooth(0, .5, r.deadT);
@@ -1884,7 +1965,7 @@
     if (!rooms.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'Chưa có phòng nào. Tạo phòng đầu tiên ở bên dưới.'; ul.append(li); return; }
     for (const r of rooms) {
       const li = document.createElement('li'), box = document.createElement('div'), nm = document.createElement('b'), meta = document.createElement('span'), bt = document.createElement('button');
-      nm.textContent = r.name; meta.textContent = (MAPS[r.map | 0] ? MAPS[r.map | 0].name + ' · ' : '') + r.n + '/' + r.max + ' người · ' + r.dur + ' phút · ' + (r.state === 'play' ? 'đang đấu, còn ' + mmss(r.left) : 'đang chờ');
+      nm.textContent = r.name; meta.textContent = (r.mode === 'team' ? 'Đấu đội · ' : 'Tự do · ') + (MAPS[r.map | 0] ? MAPS[r.map | 0].name + ' · ' : '') + r.n + '/' + r.max + ' người · ' + r.dur + ' phút · ' + (r.state === 'play' ? 'đang đấu, còn ' + mmss(r.left) : 'đang chờ');
       bt.className = 'btn alt'; bt.type = 'button'; bt.textContent = 'Vào'; bt.disabled = r.n >= r.max; bt.setAttribute('aria-label', 'Vào phòng ' + r.name);
       bt.addEventListener('click', () => { gestureAt = performance.now(); net({ t: 'join', code: r.code, n: nick }); });
       box.append(nm, meta); li.append(box, bt); ul.append(li);
@@ -1892,12 +1973,26 @@
   }
   function renderRoom() {
     if (!room) return;
-    $('roomName').textContent = room.name; $('roomMeta').textContent = 'Mã ' + room.code + ' · ' + MAPS[room.map].name + ' · ' + room.dur + ' phút · tối đa ' + room.max + ' người';
-    const ul = $('playerList'); ul.textContent = '';
-    for (const p of room.players) {
+    $('roomName').textContent = room.name; $('roomMeta').textContent = 'Mã ' + room.code + ' · ' + (teamMode() ? 'Đấu đội' : 'Tự do') + ' · ' + MAPS[room.map].name + ' · ' + room.dur + ' phút · tối đa ' + room.max + ' người';
+    const ul = $('playerList'), tc = $('teamCols'); ul.textContent = ''; tc.textContent = '';
+    const item = p => {
       const li = document.createElement('li'), nm = document.createElement('b'), tag = document.createElement('span');
-      nm.textContent = p.n; tag.textContent = [p.id === room.host ? 'chủ phòng' : '', p.id === myId ? 'mày' : ''].filter(Boolean).join(' · '); if (p.id === myId) li.className = 'me'; li.append(nm, tag); ul.append(li);
-    }
+      nm.textContent = p.n; tag.textContent = [p.id === room.host ? 'chủ phòng' : '', p.id === myId ? 'mày' : ''].filter(Boolean).join(' · '); if (p.id === myId) li.className = 'me'; li.append(nm, tag); return li;
+    };
+    ul.hidden = teamMode(); tc.hidden = !teamMode();
+    if (teamMode()) {
+      const mine = teamOf(myId), others = room.players.filter(p => p.id !== myId), cnt = t => others.filter(p => p.team === t).length;
+      for (const t of [0, 1]) {
+        const box = document.createElement('div'), h = document.createElement('h3'), list = document.createElement('ul'), bt = document.createElement('button'), mem = room.players.filter(p => p.team === t);
+        h.className = TEAMS[t].cls; h.textContent = TEAMS[t].n + ' (' + mem.length + ')'; list.className = 'list'; mem.forEach(p => list.append(item(p)));
+        if (!mem.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'Chưa có ai'; list.append(li); }
+        // hai phe không được chênh nhau quá 2 người
+        const full = cnt(t) + 1 - cnt(1 - t) > 2;
+        bt.className = 'btn ghost'; bt.type = 'button'; bt.textContent = mine === t ? 'Đang ở phe này' : full ? 'Phe này đã đông hơn 2' : 'Vào phe ' + TEAMS[t].n; bt.disabled = mine === t || full;
+        bt.addEventListener('click', () => net({ t: 'team', team: t }));
+        box.append(h, list, bt); tc.append(box);
+      }
+    } else room.players.forEach(p => ul.append(item(p)));
     const host = room.host === myId; $('roomStart').hidden = !host; $('roomWait').hidden = host;
   }
   function openLobby() {
@@ -1911,21 +2006,27 @@
   }
   function onRoom(r) {
     if (!r || typeof r !== 'object' || !Array.isArray(r.players)) return;
-    room = { code: String(r.code), name: String(r.name).slice(0, 20), host: r.host, dur: +r.dur || 5, max: r.max | 0, map: clamp(r.map | 0, 0, MAPS.length - 1), state: r.state, players: r.players.slice(0, 16).map(p => ({ id: String(p.id), n: String(p.n).slice(0, 12) || 'Khách' })) };
+    room = { code: String(r.code), name: String(r.name).slice(0, 20), host: r.host, dur: +r.dur || 5, max: r.max | 0, map: clamp(r.map | 0, 0, MAPS.length - 1), mode: r.mode === 'team' ? 'team' : 'ffa', state: r.state, players: r.players.slice(0, 16).map(p => ({ id: String(p.id), n: String(p.n).slice(0, 12) || 'Khách', team: p.team ? 1 : 0 })) };
+    if (Array.isArray(r.score)) teamScore = [r.score[0] | 0, r.score[1] | 0];
+    if (inMatch()) { // có người đổi phe giữa trận: dựng lại nhân vật của họ, mình đổi phe thì hồi sinh ở phía phe mới
+      for (const o of [...remotes.values()]) if (o.team !== teamOf(o.id)) dropRemote(o.id);
+      const nt = teamOf(myId); if (nt !== myTeam) { myTeam = nt; dressArms(); for (const o of remotes.values()) setLabel(o); if (!ghost) { respawn(); banner('Phe ' + TEAMS[myTeam].n); } if (state === 'pause') resume(); }
+    }
     if (r.state === 'play') matchEnd = performance.now() + (+r.left || 0);
     if (state === 'lobby') { state = 'room'; show('room'); }
     if (state === 'room' || state === 'result') renderRoom();
     if (r.state === 'play' && !inMatch() && (state === 'room' || state === 'result')) startMatch();
   }
-  function onEnd(board) {
-    if (!inMatch()) return;
+  function onEnd(board, sc, md) {
+    if (!inMatch()) return; showScore(false);
     leaveMatchView(); state = 'result'; clearWorld(); decor();
     const rows = Array.isArray(board) ? board.slice(0, 16) : [], ol = $('resList'); ol.textContent = '';
     const top = rows[0], tie = rows[1] && top && rows[1].k === top.k && rows[1].d === top.d;
-    $('resTitle').textContent = !top ? 'Hết giờ' : tie ? 'Hết giờ, hòa' : top.id === myId ? 'Mày thắng' : String(top.n).slice(0, 12) + ' thắng';
+    if (md === 'team' && Array.isArray(sc)) { const a = sc[0] | 0, b2 = sc[1] | 0; $('resTitle').textContent = a === b2 ? 'Hòa ' + a + ' : ' + b2 : TEAMS[a > b2 ? 0 : 1].n + ' thắng ' + Math.max(a, b2) + ' : ' + Math.min(a, b2); }
+    else $('resTitle').textContent = !top ? 'Hết giờ' : tie ? 'Hết giờ, hòa' : top.id === myId ? 'Mày thắng' : String(top.n).slice(0, 12) + ' thắng';
     rows.forEach((r, i) => {
       const li = document.createElement('li'), rk = document.createElement('i'), box = document.createElement('div'), nm = document.createElement('b'), sc = document.createElement('span');
-      rk.textContent = i + 1; nm.textContent = String(r.n).slice(0, 12) + (r.id === myId ? ' (mày)' : ''); sc.textContent = (r.k | 0) + ' hạ · ' + (r.d | 0) + ' lần chết'; if (r.id === myId) li.className = 'me';
+      rk.textContent = i + 1; nm.textContent = String(r.n).slice(0, 12) + (r.id === myId ? ' (mày)' : ''); sc.textContent = (md === 'team' ? TEAMS[r.team ? 1 : 0].n + ' · ' : '') + (r.k | 0) + ' hạ · ' + (r.d | 0) + ' lần chết'; if (r.id === myId) li.className = 'me'; if (md === 'team') nm.className = TEAMS[r.team ? 1 : 0].cls;
       box.append(nm); li.append(rk, box, sc); li.style.justifyContent = 'flex-start'; sc.style.marginLeft = 'auto'; ol.append(li);
     });
     show('result'); tone(523, .25, 'triangle', .08, 1, .6); setTimeout(() => tone(784, .4, 'triangle', .08, 1, .6), 200);
@@ -1945,7 +2046,8 @@
       let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (!m) return;
       if (m.t === 'hi') { myId = m.id; if (Array.isArray(m.addrs) && typeof m.addrs[0] === 'string') lanAddr = m.addrs[0]; if (Array.isArray(m.rooms)) rooms = m.rooms; netNote(); }
       else if (m.t === 'rooms') { if (Array.isArray(m.list)) { rooms = m.list.slice(0, 20); if (state === 'lobby') renderRooms(); netNote(); } }
-      else if (m.t === 'room') onRoom(m.room); else if (m.t === 'end') onEnd(m.board);
+      else if (m.t === 'room') onRoom(m.room); else if (m.t === 'end') onEnd(m.board, m.score, m.mode);
+      else if (m.t === 'score') { if (Array.isArray(m.s)) teamScore = [m.s[0] | 0, m.s[1] | 0]; }
       else if (m.t === 'err') { if (state === 'lobby') { $('lobbyNote').hidden = false; $('lobbyNote').textContent = String(m.msg).slice(0, 80); } }
       else if (m.t === 's') setRemote(m.id, m.s); else if (m.t === 'bye') dropRemote(m.id);
       else if (m.t === 'rk') onRk(m); else if (m.t === 'hit') onHit(m); else if (m.t === 'shot') onShot(m); else if (m.t === 'kill') onKill(m);
@@ -2019,17 +2121,22 @@
   $('reloadBtn').addEventListener('pointerdown', e => { e.preventDefault(); reload(); });
   $('adsBtn').addEventListener('pointerdown', e => { e.preventDefault(); ads = !ads; $('adsBtn').setAttribute('aria-pressed', String(ads)); });
   $('jumpBtn').addEventListener('pointerdown', e => { e.preventDefault(); wantJump = true; });
+  $('crouchBtn').addEventListener('pointerdown', e => { e.preventDefault(); crouchTog = !crouchTog; $('crouchBtn').setAttribute('aria-pressed', String(crouchTog)); });
+  $('scoreBtn').addEventListener('click', () => showScore(!scoreOn));
+  $('teamBtn').addEventListener('click', () => { if (teamMode() && myTeam >= 0) net({ t: 'team', team: 1 - myTeam }); });
   $('swapBtn').addEventListener('pointerdown', e => { e.preventDefault(); setWeapon((cur + 1) % WEAPONS.length); });
   view.addEventListener('wheel', e => { if (state !== 'play') return; e.preventDefault(); setWeapon((cur + (e.deltaY > 0 ? 1 : WEAPONS.length - 1)) % WEAPONS.length); }, { passive: false });
-  const GAMEKEYS = /^(Key[WASDRQ]|Arrow|Space|Shift|Digit[1-8])/;
+  const GAMEKEYS = /^(Key[WASDRQC]|Arrow|Space|Shift|Control|Digit[1-8])/;
   addEventListener('keydown', e => {
-    if (state === 'play' && GAMEKEYS.test(e.code)) e.preventDefault(); keys.add(e.code); if (e.repeat) return;
+    if (state === 'play' && GAMEKEYS.test(e.code)) e.preventDefault(); keys.add(e.code);
+    if (e.code === 'Tab' && (state === 'play' || (state === 'pause' && mode === 'pvp'))) { e.preventDefault(); if (!scoreOn) showScore(true); return; }
+    if (e.repeat) return;
     if (e.code === 'KeyR') reload();
     else if (/^Digit[1-8]$/.test(e.code)) setWeapon(+e.code.slice(5) - 1);
     else if (e.code === 'KeyQ') setWeapon(lastW);
     else if (e.code === 'KeyP' || (e.code === 'Escape' && (touchMode || dragLook))) { if (state === 'play') pause(); else if (state === 'pause') resume(); }
   });
-  addEventListener('keyup', e => keys.delete(e.code));
+  addEventListener('keyup', e => { keys.delete(e.code); if (e.code === 'Tab' && scoreOn) showScore(false); });
   addEventListener('blur', () => { keys.clear(); firing = false; ads = false; });
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
   const nickEl = $('nick'); try { nickEl.value = localStorage.getItem('hm-nick') || ''; } catch (e) {}
@@ -2037,8 +2144,8 @@
   $('startBtn').addEventListener('click', () => start('solo')); $('againBtn').addEventListener('click', () => start('solo')); $('restartBtn').addEventListener('click', () => start('solo'));
   $('pvpBtn').addEventListener('click', openLobby); $('lobbyBtn').addEventListener('click', () => { if (mode === 'pvp') leaveRoom(); else toMenu(); });
   const segPick = id => { const seg = $(id); seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => seg.querySelectorAll('button').forEach(o => o.setAttribute('aria-pressed', String(o === b))))); return () => +seg.querySelector('[aria-pressed="true"]').dataset.v; };
-  const getDur = segPick('durSeg'), getMax = segPick('maxSeg'), getMap = segPick('mapSeg2');
-  $('createForm').addEventListener('submit', e => { e.preventDefault(); gestureAt = -1e9; net({ t: 'create', n: nick, name: $('roomNameIn').value, dur: getDur(), max: getMax(), map: getMap() }); });
+  const getDur = segPick('durSeg'), getMax = segPick('maxSeg'), getMap = segPick('mapSeg2'), getMode = segPick('modeSeg');
+  $('createForm').addEventListener('submit', e => { e.preventDefault(); gestureAt = -1e9; net({ t: 'create', n: nick, name: $('roomNameIn').value, dur: getDur(), max: getMax(), map: getMap(), mode: getMode() ? 'team' : 'ffa' }); });
   document.querySelectorAll('#mapSeg button').forEach(b => b.addEventListener('click', () => { if (state !== 'menu') return; loadMap(+b.dataset.m); try { localStorage.setItem('hm-map', b.dataset.m); } catch (e) {} clearWorld(); decor(); }));
   $('lobbyBack').addEventListener('click', () => toMenu());
   $('roomStart').addEventListener('click', () => { gestureAt = performance.now(); net({ t: 'start' }); });

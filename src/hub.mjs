@@ -12,8 +12,9 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
   const send = (c, obj) => c.out(JSON.stringify(obj));
   const toRoom = (r, from, obj) => { const s = JSON.stringify(obj); for (const c of r.members) if (c !== from) c.out(s); };
   function newCode() { let c; do { c = ''; for (let i = 0; i < 4; i++) c += CODE[Math.random() * CODE.length | 0]; } while (rooms.has(c)); return c; }
-  const roomInfo = r => ({ code: r.code, name: r.name, n: r.members.size, max: r.max, dur: r.dur, map: r.map, state: r.state, left: r.state === 'play' ? Math.max(0, r.endAt - Date.now()) : 0 });
-  const roomFull = r => Object.assign(roomInfo(r), { host: r.host, players: [...r.members].map(c => ({ id: c.id, n: c.name })) });
+  const roomInfo = r => ({ code: r.code, name: r.name, n: r.members.size, max: r.max, dur: r.dur, map: r.map, mode: r.mode, state: r.state, left: r.state === 'play' ? Math.max(0, r.endAt - Date.now()) : 0 });
+  const roomFull = r => Object.assign(roomInfo(r), { host: r.host, score: r.score, players: [...r.members].map(c => ({ id: c.id, n: c.name, team: c.team })) });
+  const teamCount = (r, t, skip) => { let n = 0; for (const c of r.members) if (c !== skip && c.team === t) n++; return n; };
   function pushRooms(to) {
     const msg = { t: 'rooms', list: [...rooms.values()].map(roomInfo) };
     if (to) send(to, msg); else { const s = JSON.stringify(msg); for (const c of clients.values()) if (!c.room) c.out(s); }
@@ -30,12 +31,17 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
     if (c.room === r) return;
     if (r.members.size >= r.max) { send(c, { t: 'err', msg: 'Phòng đã đủ người.' }); return; }
     if (c.room) leave(c);
+    c.team = teamCount(r, 0) <= teamCount(r, 1) ? 0 : 1; // vào phe đang ít người hơn
     r.members.add(c); c.room = r; c.state = null; pushRoom(r);
     if (r.state === 'play') for (const o of r.members) if (o !== c && o.state) send(c, { t: 's', id: o.id, s: o.state });
     pushRooms();
   }
   function startMatch(r) {
-    r.state = 'play'; r.endAt = Date.now() + r.dur * 60000; for (const c of r.members) c.state = null;
+    r.state = 'play'; r.endAt = Date.now() + r.dur * 60000; r.score = [0, 0]; for (const c of r.members) c.state = null;
+    if (r.mode === 'team') for (let guard = 0; guard < 16; guard++) { // cân lại nếu hai phe chênh nhau quá 2 người: chuyển người vào sau cùng của phe đông
+      const a = teamCount(r, 0), b = teamCount(r, 1); if (Math.abs(a - b) <= 2) break;
+      const big = a > b ? 0 : 1, last = [...r.members].filter(c => c.team === big).pop(); if (!last) break; last.team = 1 - big;
+    }
     clearTimeout(r.timer); r.timer = setTimeout(() => endMatch(r), r.dur * 60000);
     log('  phòng ' + r.code + ' bắt đầu trận ' + r.dur + ' phút, ' + r.members.size + ' người');
     pushRoom(r); pushRooms();
@@ -43,8 +49,8 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
   function endMatch(r) {
     if (rooms.get(r.code) !== r || r.state !== 'play') return;
     r.state = 'wait';
-    const board = [...r.members].map(c => ({ id: c.id, n: c.name, k: c.state ? c.state.k : 0, d: c.state ? c.state.d : 0 })).sort((a, b) => b.k - a.k || a.d - b.d);
-    for (const c of r.members) { send(c, { t: 'end', board }); c.state = null; }
+    const board = [...r.members].map(c => ({ id: c.id, n: c.name, team: c.team, k: c.state ? c.state.k : 0, d: c.state ? c.state.d : 0 })).sort((a, b) => b.k - a.k || a.d - b.d);
+    for (const c of r.members) { send(c, { t: 'end', board, score: r.score, mode: r.mode }); c.state = null; }
     log('  phòng ' + r.code + ' hết giờ' + (board[0] ? ', dẫn đầu: ' + board[0].n + ' (' + board[0].k + ' hạ)' : ''));
     pushRoom(r); pushRooms();
   }
@@ -58,7 +64,7 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
       case 'create': {
         if (rooms.size >= MAX_ROOMS) { send(c, { t: 'err', msg: 'Máy chủ đã đủ số phòng.' }); break; }
         c.name = clean(m.n, 12) || c.name;
-        const room = { code: newCode(), name: clean(m.name, 20) || 'Phòng của ' + c.name, host: c.id, dur: clampNum(m.dur, .1, 30, 5), max: Math.round(clampNum(m.max, 2, MAX_ROOM_PLAYERS, 8)), map: Math.round(clampNum(m.map, 0, 9, 0)), state: 'wait', endAt: 0, members: new Set(), timer: null };
+        const room = { code: newCode(), name: clean(m.name, 20) || 'Phòng của ' + c.name, host: c.id, dur: clampNum(m.dur, .1, 30, 5), max: Math.round(clampNum(m.max, 2, MAX_ROOM_PLAYERS, 8)), map: Math.round(clampNum(m.map, 0, 9, 0)), mode: m.mode === 'ffa' ? 'ffa' : 'team', score: [0, 0], state: 'wait', endAt: 0, members: new Set(), timer: null };
         rooms.set(room.code, room); log('  phòng ' + room.code + ' "' + room.name + '" do ' + c.name + ' tạo');
         join(c, room); break;
       }
@@ -72,12 +78,12 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
       case 'start': if (r && r.host === c.id && r.state === 'wait') startMatch(r); break;
       case 's':
         if (!r || r.state !== 'play') break;
-        c.state = { m: 'pvp', n: c.name, x: num(m.x), y: num(m.y), z: num(m.z), yw: num(m.yw), pt: Math.max(-1.5, Math.min(1.5, num(m.pt))), w: Math.min(9, Math.max(0, m.w | 0)), a: m.a ? 1 : 0, k: Math.max(0, m.k | 0), d: Math.max(0, m.d | 0) };
+        c.state = { m: 'pvp', n: c.name, x: num(m.x), y: num(m.y), z: num(m.z), yw: num(m.yw), pt: Math.max(-1.5, Math.min(1.5, num(m.pt))), w: Math.min(9, Math.max(0, m.w | 0)), c: m.c ? 1 : 0, a: m.a ? 1 : 0, k: Math.max(0, m.k | 0), d: Math.max(0, m.d | 0) };
         toRoom(r, c, { t: 's', id: c.id, s: c.state }); break;
       case 'hit': {
         if (!r || r.state !== 'play') break;
         const to = clients.get(String(m.to)), d = +m.d;
-        if (to && to !== c && to.room === r && d > 0 && d <= 200) send(to, { t: 'hit', from: c.id, d: Math.round(d) });
+        if (to && to !== c && to.room === r && d > 0 && d <= 200 && !(r.mode === 'team' && to.team === c.team)) send(to, { t: 'hit', from: c.id, d: Math.round(d) });
         break;
       }
       case 'shot':
@@ -87,14 +93,27 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
         if (r && r.state === 'play' && Array.isArray(m.o) && Array.isArray(m.v) && m.o.length === 3 && m.v.length === 3 && m.o.every(Number.isFinite) && m.v.every(Number.isFinite))
           toRoom(r, c, { t: 'rk', from: c.id, k: m.k ? 1 : 0, o: m.o.map(num), v: m.v.map(x => Math.round(Math.max(-1, Math.min(1, x)) * 1000) / 1000) });
         break;
-      case 'kill': if (r && r.state === 'play') toRoom(r, c, { t: 'kill', from: c.id, by: typeof m.by === 'string' ? m.by.slice(0, 12) : null }); break;
+      case 'kill': {
+        if (!r || r.state !== 'play') break;
+        const by = typeof m.by === 'string' ? m.by.slice(0, 12) : null, killer = by ? clients.get(by) : null;
+        toRoom(r, c, { t: 'kill', from: c.id, by });
+        if (r.mode === 'team' && killer && killer.room === r && killer.team !== c.team) { r.score[killer.team]++; toRoom(r, null, { t: 'score', s: r.score }); }
+        break;
+      }
+      case 'team': { // đổi phe: hai phe không được chênh nhau quá 2 người
+        if (!r || r.mode !== 'team') break;
+        const t = m.team ? 1 : 0; if (c.team === t) break;
+        if (teamCount(r, t, c) + 1 - teamCount(r, 1 - t, c) > 2) { send(c, { t: 'err', msg: 'Phe này đã đông hơn 2 người, chọn phe kia.' }); break; }
+        c.team = t; c.state = null; toRoom(r, c, { t: 'bye', id: c.id }); pushRoom(r);
+        break;
+      }
     }
   }
   return {
     // out(chuỗi): gửi cho người chơi; close(): đóng kết nối. Trả về null nếu máy chủ đã đầy.
     connect(out, close) {
       if (clients.size >= MAX_CLIENTS) return null;
-      const c = { id: 'p' + (nextId++), out, close, state: null, room: null, name: 'Khách', seen: Date.now() };
+      const c = { id: 'p' + (nextId++), out, close, state: null, room: null, team: 0, name: 'Khách', seen: Date.now() };
       clients.set(c.id, c);
       send(c, { t: 'hi', id: c.id, addrs: addrs(), rooms: [...rooms.values()].map(roomInfo) });
       log('+ ' + c.id + ' vào (' + clients.size + ' người)');

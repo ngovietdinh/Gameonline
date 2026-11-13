@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <style>html, body { margin: 0; } img { max-width: 100%; } [hidden] { display: none !important; }</style>
 </head>
 <body>
@@ -55,7 +55,7 @@
   .tr { position: absolute; top: 10px; right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 8px; }
   #stage.touch #fpsTxt { display: none; }
   #mini { position: absolute; top: 62px; right: max(16px, env(safe-area-inset-right, 0px)); width: 132px; height: 132px; border-radius: 3px; }
-  #stage.touch #mini { top: 116px; width: 92px; height: 92px; }
+  #stage.touch #mini { top: 60px; width: 84px; height: 84px; }
   #fpsTxt { position: absolute; top: 200px; right: max(16px, env(safe-area-inset-right, 0px)); font-size: 11px; color: var(--muted); text-shadow: 0 1px 3px #000; }
   .icon-btn { pointer-events: auto; width: 44px; height: 44px; display: grid; place-items: center; touch-action: none; cursor: pointer;
     border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 800 18px/1 var(--display); }
@@ -72,8 +72,13 @@
   .br b { font-family: var(--display); font-weight: 800; font-size: 52px; line-height: .9; }
   .br b span { font-size: 22px; color: var(--muted); font-weight: 500; }
   .br.low b { color: var(--hp); }
-  #stage.touch .bl, #stage.touch .br { bottom: auto; top: 64px; }
-  #stage.touch .hpnum { font-size: 28px; } #stage.touch .br b { font-size: 32px; } #stage.touch .br b span { font-size: 16px; }
+  /* điện thoại: máu và đạn dồn xuống giữa cạnh dưới, hai bên để trống cho hai ngón cái */
+  #stage.touch { touch-action: none; }
+  #stage.rot { position: fixed; top: 0; left: 0; transform-origin: top left; transform: rotate(90deg) translateY(-100%); }
+  #stage.touch .bl { top: auto; bottom: 8px; left: 50%; right: auto; width: 116px; transform: translateX(-108%); gap: 3px; }
+  #stage.touch .br { top: auto; bottom: 8px; left: 50%; right: auto; transform: translateX(8%); justify-items: start; text-align: left; pointer-events: auto; }
+  #stage.touch .hpnum { font-size: 26px; } #stage.touch .br b { font-size: 30px; } #stage.touch .br b span { font-size: 15px; }
+  #stage.touch .bl small { display: none; }
   #banner { position: absolute; left: 0; right: 0; top: 20%; text-align: center; opacity: 0; transition: opacity .35s;
     padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
     font-family: var(--display); font-weight: 800; font-size: clamp(30px, 6.5vw, 56px); line-height: 1.05; letter-spacing: .08em; text-transform: uppercase;
@@ -84,13 +89,14 @@
   #touchUi { position: absolute; inset: 0; }
   .tbtn { position: absolute; pointer-events: auto; touch-action: none; border-radius: 50%; cursor: pointer; display: grid; place-items: center;
     border: 2px solid rgba(238,242,246,.55); background: rgba(8,11,16,.45); color: var(--ink); font: 800 15px/1 var(--display); letter-spacing: .03em; }
-  #fireBtn { width: 84px; height: 84px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 6px); bottom: 34px; border-color: var(--neon); color: var(--neon); font-size: 18px; }
-  #jumpBtn { width: 56px; height: 56px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 100px); bottom: 22px; }
-  #reloadBtn { width: 56px; height: 56px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 84px); bottom: 96px; }
-  #adsBtn { width: 56px; height: 56px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 10px); bottom: 132px; }
+  #fireBtn { width: 90px; height: 90px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 8px); bottom: 30px; border-color: var(--neon); color: var(--neon); font-size: 19px; }
+  #jumpBtn { width: 54px; height: 54px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 114px); bottom: 82px; }
+  #reloadBtn { width: 54px; height: 54px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 108px); bottom: 16px; }
+  #adsBtn { width: 54px; height: 54px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 14px); bottom: 134px; }
   #adsBtn[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
-  #joy { position: absolute; width: 116px; height: 116px; margin: -58px 0 0 -58px; border-radius: 50%; border: 2px solid rgba(238,242,246,.4); }
-  #knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgba(255,61,134,.6); }
+  #joy { position: absolute; width: 132px; height: 132px; margin: -66px 0 0 -66px; border-radius: 50%; border: 2px solid rgba(238,242,246,.55); background: rgba(8,11,16,.25); opacity: .5; pointer-events: none; }
+  #joy.on { opacity: 1; }
+  #knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(255,61,134,.65); }
 
   .overlay { position: absolute; inset: 0; z-index: 3; display: grid; overflow-y: auto;
     padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
@@ -155,7 +161,7 @@
   .teams .btn { min-height: 44px; font-size: 15px; padding: 6px 10px; }
   .teams .list li { padding: 6px 10px; }
   #board li.tA span { color: #9fd0ff; } #board li.tB span { color: #ffa399; }
-  #crouchBtn { width: 56px; height: 56px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 164px); bottom: 22px; }
+  #crouchBtn { width: 54px; height: 54px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 80px); bottom: 142px; }
   #crouchBtn[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
   #timer { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font: 800 30px/1 var(--display); letter-spacing: .04em; text-shadow: 0 2px 6px #000; }
   #timer.low { color: var(--hp); }
@@ -170,7 +176,7 @@
   #wbar span.on b { color: var(--cyan); }
   #stage.touch #wbar { display: none; }
   @media (max-width: 760px) { #wbar span { font-size: 0; gap: 0; padding: 4px 8px; } #wbar span b { font-size: 13px; } }
-  #swapBtn { width: 56px; height: 56px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 76px); bottom: 164px; }
+  #swapBtn { width: 54px; height: 54px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 174px); bottom: 16px; }
   .field { display: grid; gap: 6px; max-width: 280px; }
   .field span { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
   .field input { width: 100%; min-height: 46px; padding: 8px 12px; border-radius: 3px; border: 1px solid var(--line); background: rgba(0,0,0,.4); color: var(--ink);
@@ -211,7 +217,7 @@
     <div id="wbar"></div>
     <div id="banner"></div>
     <div id="touchUi" hidden>
-      <div id="joy" hidden><div id="knob"></div></div>
+      <div id="joy"><div id="knob"></div></div>
       <button class="tbtn" id="swapBtn" type="button" aria-label="Đổi súng">Đổi</button>
       <button class="tbtn" id="adsBtn" type="button" aria-label="Ngắm" aria-pressed="false">Ngắm</button>
       <button class="tbtn" id="reloadBtn" type="button" aria-label="Nạp đạn">Nạp</button>
@@ -227,7 +233,7 @@
       <p>Nửa đêm, một con hẻm vừa tạnh mưa. Đàn máy bay tuần tra bay vào từ trên mái. <strong>Giữ hẻm qua từng đợt.</strong></p>
       <ul class="how">
         <li><b>Máy tính:</b> WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, phím 1 đến 8 hoặc lăn chuột để đổi súng, Shift chạy nhanh, Ctrl hoặc C để ngồi, Space nhảy, giữ Tab xem bảng thành tích.</li>
-        <li><b>Điện thoại:</b> kéo nửa trái để chạy, kéo nửa phải để ngắm, giữ nút Bắn.</li>
+        <li><b>Điện thoại:</b> vào trận là màn hình tự xoay ngang. Cần ảo bên trái để chạy (đẩy hết cỡ là chạy nhanh), kéo nửa phải để ngắm. Súng tự bắn khi tâm ngắm trúng địch; vẫn có nút Bắn, Ngắm, Nạp, Nhảy, Ngồi, Đổi.</li>
         <li><b>Đấu nhiều người:</b> mọi người mở chung địa chỉ này, bấm nút đấu rồi tạo phòng hoặc vào phòng có sẵn. Đấu đội chia hai phe Công an và Tội phạm, hết giờ phe nào hạ nhiều hơn thì thắng.</li>
       </ul>
       <div class="load" id="loadBar"><i id="loadFill"></i></div>
@@ -302,6 +308,7 @@
       <div class="row">
         <button class="btn" id="resumeBtn" type="button">Chơi tiếp</button>
         <button class="btn ghost" id="restartBtn" type="button">Chơi lại</button>
+        <button class="btn ghost" id="autoBtn" type="button" hidden>Tự bắn: Bật</button>
         <button class="btn ghost" id="teamBtn" type="button" hidden>Đổi phe</button>
         <button class="btn ghost" id="lobbyBtn" type="button">Về sảnh</button>
       </div>
@@ -1310,9 +1317,9 @@
     FU.tRefl.value = rtRefl ? rtRefl.texture : null; FU.uReflOn.value = rtRefl ? 1 : 0;
   }
   function resize() {
-    const r = stage.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height);
+    W = Math.max(200, stage.clientWidth); H = Math.max(200, stage.clientHeight); // kích thước bố cục, không đổi khi khung bị xoay
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.maxPR) * resScale); renderer.setSize(W, H, false);
-    camera.aspect = W / H; baseFov = W < H ? 86 : 72; camera.fov = baseFov; camera.updateProjectionMatrix(); makeRTs();
+    camera.aspect = W / H; baseFov = W < H ? 86 : 72; camera.fov = baseFov; camera.updateProjectionMatrix(); makeRTs(); joyRest();
   }
   let baseFov = 72;
   function setQuality(name, auto) {
@@ -1374,6 +1381,7 @@
   let dead = false, respawnT = 0, myK = 0, myD = 0, lastHurtBy = null, presT = 0, shotEmitT = 0, boardT = 0, boardKey = '';
   let rooms = [], room = null, matchEnd = 0, gestureAt = -1e9, ghost = false, lastBeep = 0;
   let myTeam = -1, teamScore = [0, 0], crouchK = 0, crouchTog = false, scoreOn = false;
+  let rot = false, autoFire = true, afOn = false, afT = 0; try { autoFire = localStorage.getItem('hm-af') !== '0'; } catch (e) {}
   const TEAMS = [{ n: 'Công an', cls: 'tA' }, { n: 'Tội phạm', cls: 'tB' }];
   const teamMode = () => !!room && room.mode === 'team';
   const teamOf = id => { if (!teamMode()) return -1; const p = room.players.find(o => o.id === id); return p ? p.team : -1; };
@@ -1446,7 +1454,7 @@
   };
 
   /* ================= HUD ================= */
-  function show(id) { for (const o of ['menu', 'lobby', 'room', 'result', 'pause', 'over']) $(o).hidden = o !== id; $('hud').hidden = !(state === 'play' || state === 'pause'); }
+  function show(id) { for (const o of ['menu', 'lobby', 'room', 'result', 'pause', 'over']) $(o).hidden = o !== id; $('hud').hidden = !(state === 'play' || state === 'pause'); updateRot(); }
   let bannerTimer = 0;
   function banner(txt, sub) { const b = $('banner'); b.textContent = txt; if (sub) { const s = document.createElement('small'); s.textContent = sub; b.append(s); } b.classList.add('on'); bannerTimer = 2.6; }
   const cache = {}; const setTxt = (id, v) => { if (cache[id] !== v) { cache[id] = v; $(id).textContent = v; } };
@@ -1512,7 +1520,7 @@
     vm.visible = true; state = 'play'; show(null);
     $('board').hidden = mode !== 'pvp'; $('timer').hidden = mode !== 'pvp'; $('restartBtn').hidden = mode === 'pvp'; $('resumeBtn').textContent = 'Chơi tiếp';
     if (mode === 'pvp') enterPvp(); else { myTeam = -1; dressArms(); startWave(1); }
-    if (!touchMode && !noLock) { lock(); goFull(); }
+    if (touchMode) goFullTouch(); else if (!noLock) { lock(); goFull(); }
   }
   function goFull() { // toàn màn hình rồi khóa phím: nhờ vậy giữ Ctrl để ngồi mà bấm W không đóng thẻ trình duyệt (Chrome, Edge)
     if (document.fullscreenElement || !stage.requestFullscreen) return;
@@ -1531,10 +1539,10 @@
   document.addEventListener('pointerlockerror', lockFailed);
   function pause(note) {
     if (state !== 'play') return; state = 'pause'; firing = false; keys.clear();
-    $('pauseNote').textContent = note || (mode === 'pvp' ? 'Trận vẫn chạy, đứng yên vẫn bị bắn.' : touchMode || dragLook ? 'Ván chơi đang dừng.' : 'Bấm Chơi tiếp để khóa chuột lại.'); $('lobbyBtn').textContent = mode === 'pvp' ? 'Rời phòng' : 'Về sảnh'; $('teamBtn').hidden = !(mode === 'pvp' && teamMode()); showScore(false); show('pause');
+    $('pauseNote').textContent = note || (mode === 'pvp' ? 'Trận vẫn chạy, đứng yên vẫn bị bắn.' : touchMode || dragLook ? 'Ván chơi đang dừng.' : 'Bấm Chơi tiếp để khóa chuột lại.'); $('lobbyBtn').textContent = mode === 'pvp' ? 'Rời phòng' : 'Về sảnh'; $('teamBtn').hidden = !(mode === 'pvp' && teamMode()); $('autoBtn').hidden = !touchMode; showScore(false); show('pause');
     if (document.pointerLockElement) document.exitPointerLock();
   }
-  function resume() { if (state !== 'pause') return; state = 'play'; show(null); initAudio(); $('resumeBtn').textContent = 'Chơi tiếp'; if (ghost) { ghost = false; respawnT = 0; } if (!touchMode) { lock(); goFull(); } }
+  function resume() { if (state !== 'pause') return; state = 'play'; show(null); initAudio(); $('resumeBtn').textContent = 'Chơi tiếp'; if (ghost) { ghost = false; respawnT = 0; } if (touchMode) goFullTouch(); else { lock(); goFull(); } }
   function gameOver() {
     state = 'over'; firing = false; vm.visible = false; if (document.pointerLockElement) document.exitPointerLock();
     const isBest = score > best; if (isBest) { best = Math.floor(score); try { localStorage.setItem('hm-best', String(best)); } catch (e) {} }
@@ -1709,7 +1717,8 @@
     const shk = reduced ? 0 : shake * .022;
     camera.rotation.set(clamp(P.pitch + P.recoil + rnd(-1, 1) * shk, -1.5, 1.5), P.yaw + P.recoilYaw + rnd(-1, 1) * shk, (reduced ? 0 : Math.cos(P.bob) * .004 * bobK) + rnd(-1, 1) * shk);
     cd -= dt; if (reloadT > 0) { reloadT -= dt; if (reloadT <= 0) { GUN.ammo = GUN.mag; noise(.05, 3500, 1200, .16); tone(420, .04, 'square', .05); } }
-    if (!firing) fired = false; else if (!sprint && (GUN.auto || !fired || touchMode)) shoot();
+    if (touchMode && autoFire && !GUN.proj) { afT -= dt; if (afT <= 0) { afT = .09; afOn = aimOnFoe(); } } else afOn = false; // điện thoại: tự bắn khi tâm ngắm trúng địch
+    if (!firing && !afOn) fired = false; else if (!sprint && (GUN.auto || !fired || touchMode)) shoot();
     adsK += ((ads && reloadT <= 0 ? 1 : 0) - adsK) * Math.min(1, dt * 13); sprintK += ((sprint ? 1 : 0) - sprintK) * Math.min(1, dt * 9);
     const fov = lerp(baseFov, baseFov * GUN.adsFov, adsK); if (Math.abs(camera.fov - fov) > .01) { camera.fov = fov; camera.updateProjectionMatrix(); }
     // tay súng
@@ -1961,6 +1970,7 @@
     banner(teamMode() && myTeam >= 0 ? 'Phe ' + TEAMS[myTeam].n : room ? room.name : 'Vào sân', room ? 'Trận ' + room.dur + ' phút. ' + (teamMode() ? 'Phe nào hạ nhiều hơn thì thắng' : 'Ai hạ nhiều nhất thắng') : '');
   }
   function pvpHurt(d, from) {
+    if (touchMode && navigator.vibrate) navigator.vibrate(25);
     P.hp -= d; hurtT = .5; P.since = 0; tone(110, .22, 'sawtooth', .12, .5, .3); noise(.12, 900, 200, .2);
     if (from) { dmgT = 1; dmgAng = Math.atan2(from.x - P.pos.x, -(from.z - P.pos.z)) + P.yaw; }
     if (P.hp > 0) return;
@@ -2178,26 +2188,51 @@
 
   /* ================= điều khiển ================= */
   const SENS = .0021, SENS_T = .0052; let lockAt = 0;
+  // điện thoại cầm dọc: xoay cả khung game 90 độ; tọa độ ngón tay phải đổi theo
+  const sp = e => rot ? { x: e.clientY, y: innerWidth - e.clientX } : { x: e.clientX, y: e.clientY };
+  function joyRest() { if (moveId !== null) return; const j = $('joy'); j.classList.remove('on'); j.style.left = 'calc(max(16px, env(safe-area-inset-left, 0px)) + 84px)'; j.style.top = (H - 98) + 'px'; $('knob').style.transform = ''; }
+  function updateRot() {
+    const want = touchMode && (state === 'play' || state === 'pause') && innerHeight > innerWidth;
+    if (want !== rot) { rot = want; stage.classList.toggle('rot', rot); }
+    stage.style.width = rot ? innerHeight + 'px' : ''; stage.style.height = rot ? innerWidth + 'px' : '';
+  }
+  addEventListener('resize', updateRot); addEventListener('orientationchange', () => setTimeout(updateRot, 60));
+  function goFullTouch() { // Android: toàn màn hình rồi khóa hướng ngang. iPhone không cho khóa, khi đó khung game tự xoay bằng CSS ở trên
+    try {
+      const el = document.documentElement, lockO = () => { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); };
+      const pr = !document.fullscreenElement && el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : null;
+      if (pr && pr.then) pr.then(lockO).catch(() => {}); else lockO();
+      if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {});
+    } catch (e) {}
+  }
+  function aimOnFoe() { // có mục tiêu ngay giữa tâm ngắm và không bị che không (dùng cho tự bắn trên điện thoại)
+    camera.getWorldDirection(fwd); const o = camera.position; let bd = 1e9, got = false;
+    const test = (x, y, z, r) => { v1.set(x, y, z).sub(o); const d = v1.length(); if (d < .5 || d > 70 || d >= bd) return; if (Math.acos(clamp(v1.dot(fwd) / d, -1, 1)) < Math.max(.03, r / d)) { bd = d; got = true; v2.copy(v1).divideScalar(d); } };
+    for (const e of enemies) if (!e.decor) test(e.pos.x, e.pos.y, e.pos.z, e.r);
+    if (mode === 'pvp') for (const r of remotes.values()) if (r.alive && isFoe(r)) test(r.g.position.x, r.g.position.y + 1.1 * (1 - r.cr * .3), r.g.position.z, .4);
+    if (!got) return false;
+    ray.set(o, v2); ray.far = bd - .3; return !ray.intersectObjects(statics, false).length;
+  }
   const look = (dx, dy, s) => { const k = s * lerp(1, Math.max(.22, GUN.adsFov * .9), adsK); P.yaw -= dx * k; P.pitch = clamp(P.pitch - dy * k, -1.45, 1.45); swayX = clamp(swayX - dx * .00012, -.03, .03); swayY = clamp(swayY - dy * .00012, -.03, .03); };
   addEventListener('pointerdown', e => { lastPT = e.pointerType || 'mouse'; }, true);
   const touches = new Map(); let moveId = null;
-  function setJoy(t) { const R = 52, dx = t.x - t.ox, dy = t.y - t.oy, l = Math.hypot(dx, dy) || 1, k = Math.min(1, R / l); joyX = dx * k / R; joyY = dy * k / R; $('knob').style.transform = `translate(${dx * k}px, ${dy * k}px)`; }
+  function setJoy(t) { const R = 60, dx = t.x - t.ox, dy = t.y - t.oy, l = Math.hypot(dx, dy) || 1, k = Math.min(1, R / l); joyX = dx * k / R; joyY = dy * k / R; $('knob').style.transform = `translate(${dx * k}px, ${dy * k}px)`; }
   view.addEventListener('pointerdown', e => {
     if (state !== 'play') return;
     if (e.pointerType === 'mouse') return; // nút chuột nghe ở mousedown bên dưới: pointerdown không báo nút thứ hai khi đang giữ nút đầu
-    const r = stage.getBoundingClientRect(), x = e.clientX, y = e.clientY, kind = moveId === null && x - r.left < r.width * .45 ? 'move' : 'look';
+    const p = sp(e), x = p.x, y = p.y, kind = moveId === null && x < W * .42 ? 'move' : 'look';
     touches.set(e.pointerId, { kind, ox: x, oy: y, x, y }); try { view.setPointerCapture(e.pointerId); } catch (err) {}
-    if (kind === 'move') { moveId = e.pointerId; const j = $('joy'); j.hidden = false; j.style.left = (x - r.left) + 'px'; j.style.top = (y - r.top) + 'px'; $('knob').style.transform = ''; }
+    if (kind === 'move') { moveId = e.pointerId; const j = $('joy'); j.classList.add('on'); j.style.left = x + 'px'; j.style.top = y + 'px'; $('knob').style.transform = ''; } // cần ảo nhảy tới chỗ ngón tay chạm
     e.preventDefault();
   });
   view.addEventListener('pointermove', e => {
     if (state !== 'play') return;
     if (e.pointerType === 'mouse') { if ((locked && performance.now() - lockAt > 180) || (dragLook && (e.buttons & 1))) look(e.movementX || 0, e.movementY || 0, SENS); return; }
-    const t = touches.get(e.pointerId); if (!t) return; if (t.kind === 'look') look(e.clientX - t.x, e.clientY - t.y, SENS_T); t.x = e.clientX; t.y = e.clientY; if (t.kind === 'move') setJoy(t);
+    const t = touches.get(e.pointerId); if (!t) return; const p = sp(e); if (t.kind === 'look') tlook(p.x - t.x, p.y - t.y); t.x = p.x; t.y = p.y; if (t.kind === 'move') setJoy(t);
   });
   const endTouch = e => {
     if (e.pointerType === 'mouse') return;
-    const t = touches.get(e.pointerId); if (!t) return; touches.delete(e.pointerId); if (t.kind === 'move') { moveId = null; joyX = joyY = 0; $('joy').hidden = true; }
+    const t = touches.get(e.pointerId); if (!t) return; touches.delete(e.pointerId); if (t.kind === 'move') { moveId = null; joyX = joyY = 0; joyRest(); }
   };
   view.addEventListener('pointerup', endTouch); view.addEventListener('pointercancel', endTouch);
   view.addEventListener('mousedown', e => {
@@ -2208,8 +2243,9 @@
   addEventListener('mouseup', e => { if (e.button === 0) firing = false; if (e.button === 2) ads = false; });
   view.addEventListener('contextmenu', e => e.preventDefault());
   const fb = $('fireBtn');
-  fb.addEventListener('pointerdown', e => { firing = true; touches.set(e.pointerId, { kind: 'look', x: e.clientX, y: e.clientY }); try { fb.setPointerCapture(e.pointerId); } catch (err) {} e.preventDefault(); });
-  fb.addEventListener('pointermove', e => { const t = touches.get(e.pointerId); if (!t) return; look(e.clientX - t.x, e.clientY - t.y, SENS_T); t.x = e.clientX; t.y = e.clientY; });
+  const tlook = (dx, dy) => { const a = 1 + Math.min(1.1, Math.hypot(dx, dy) / 42); look(dx * a, dy * a, SENS_T); }; // vuốt nhanh thì xoay nhiều hơn
+  fb.addEventListener('pointerdown', e => { const p = sp(e); firing = true; touches.set(e.pointerId, { kind: 'look', x: p.x, y: p.y }); try { fb.setPointerCapture(e.pointerId); } catch (err) {} e.preventDefault(); });
+  fb.addEventListener('pointermove', e => { const t = touches.get(e.pointerId); if (!t) return; const p = sp(e); tlook(p.x - t.x, p.y - t.y); t.x = p.x; t.y = p.y; });
   const fbEnd = e => { if (touches.delete(e.pointerId)) firing = false; };
   fb.addEventListener('pointerup', fbEnd); fb.addEventListener('pointercancel', fbEnd); fb.addEventListener('contextmenu', e => e.preventDefault());
   $('reloadBtn').addEventListener('pointerdown', e => { e.preventDefault(); reload(); });
@@ -2219,6 +2255,9 @@
   $('scoreBtn').addEventListener('click', () => showScore(!scoreOn));
   $('teamBtn').addEventListener('click', () => { if (teamMode() && myTeam >= 0) net({ t: 'team', team: 1 - myTeam }); });
   $('swapBtn').addEventListener('pointerdown', e => { e.preventDefault(); setWeapon((cur + 1) % WEAPONS.length); });
+  $('ammoBox').addEventListener('pointerdown', e => { if (!touchMode) return; e.preventDefault(); setWeapon((cur + 1) % WEAPONS.length); }); // chạm vào ô đạn cũng đổi súng
+  const autoLabel = () => { $('autoBtn').textContent = 'Tự bắn: ' + (autoFire ? 'Bật' : 'Tắt'); };
+  $('autoBtn').addEventListener('click', () => { autoFire = !autoFire; try { localStorage.setItem('hm-af', autoFire ? '1' : '0'); } catch (e) {} autoLabel(); }); autoLabel();
   view.addEventListener('wheel', e => { if (state !== 'play') return; e.preventDefault(); setWeapon((cur + (e.deltaY > 0 ? 1 : WEAPONS.length - 1)) % WEAPONS.length); }, { passive: false });
   const GAMEKEYS = /^(Key[WASDRQC]|Arrow|Space|Shift|Control|Digit[1-8])/;
   addEventListener('keydown', e => {
@@ -2256,7 +2295,7 @@
   let savedQ = null; try { const sq = localStorage.getItem('hm-q2'); if (sq && QUAL[sq]) savedQ = sq; } catch (e) {}
   setQuality(savedQ || qName, !savedQ);
   loadMap(savedMap); skin(gun);
-  window.__hm = { stats: () => ({ calls: lastInfo.calls, tris: lastInfo.tris, bakeMs: Math.round(bakeMs), quality: qName, guns: WEAPONS.map(w => w.name + ' ' + triCount(w.g)), soldier: Math.round(Object.keys(SOLDIER).reduce((n, k) => n + SOLDIER[k].reduce((m, it) => m + it[0].index.count / 3, 0) * (k === 'shin' ? 2 : 1), 0)), drones: enemies.map(e => e.type + ' ' + triCount(e.g)) }) };
+  window.__hm = { stats: () => ({ calls: lastInfo.calls, tris: lastInfo.tris, bakeMs: Math.round(bakeMs), quality: qName, guns: WEAPONS.map(w => w.name + ' ' + triCount(w.g)), pos: [Math.round(P.pos.x * 10) / 10, Math.round(P.pos.z * 10) / 10], yaw: Math.round(P.yaw * 100) / 100, rot, size: [W, H], ammo: GUN.ammo, soldier: Math.round(Object.keys(SOLDIER).reduce((n, k) => n + SOLDIER[k].reduce((m, it) => m + it[0].index.count / 3, 0) * (k === 'shin' ? 2 : 1), 0)), drones: enemies.map(e => e.type + ' ' + triCount(e.g)) }) };
   function decor() { wave = 1; for (let i = 0; i < 4; i++) spawn(i === 3 ? 'heavy' : 'scout', { a: i * 1.7, r: 1.6 + (i % 2) * .8, y: 3.4 + i * .7, z: -4 - i * 3, w: (i % 2 ? -1 : 1) * (.22 + i * .04) }); }
   decor();
   progress(.95); await tick();

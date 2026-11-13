@@ -118,7 +118,13 @@ Ghi chú về quy trình: game không dùng file mô hình ngoài, mọi hình k
 - Máy tính: WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, 1 đến 8 đổi súng, Space nhảy, Esc tạm dừng.
 - **Shift** (giữ, khi đang tiến): chạy nhanh. **Ctrl** hoặc **C** (giữ): ngồi, đi chậm hơn, bắn chụm hơn, khó bị trúng hơn. **Tab** (giữ): bảng thành tích.
 - Khi vào trận, game tự bật toàn màn hình. Trên Chrome và Edge việc này còn khóa phím, nhờ đó giữ Ctrl rồi bấm W không đóng thẻ trình duyệt. Trên Firefox và Safari, Ctrl+W vẫn là lệnh đóng thẻ (trình duyệt sẽ hỏi lại trước khi đóng), nên dùng phím C để ngồi.
-- Điện thoại: kéo nửa trái để chạy, kéo nửa phải để ngắm, giữ nút Bắn; có nút Ngắm, Nạp, Đổi, Nhảy, Ngồi. Nút ≡ ở góc trên phải mở bảng thành tích.
+- Điện thoại:
+  - Vào trận là màn hình tự xoay ngang. Android: game bật toàn màn hình và khóa hướng ngang. iPhone không cho trang web khóa hướng, nên khung game tự xoay 90 độ; chỉ cần quay ngang máy.
+  - Cần ảo bên trái để chạy: luôn hiện ở góc dưới trái, chạm chỗ nào trong nửa trái thì cần nhảy tới đó. Đẩy hết cỡ là chạy nhanh.
+  - Kéo nửa phải để ngắm; vuốt nhanh thì xoay nhiều hơn.
+  - Súng tự bắn khi tâm ngắm trúng địch (tắt được ở màn hình tạm dừng). Tên lửa và phóng lựu không tự bắn.
+  - Nút bên phải: Bắn, Ngắm, Nạp, Nhảy, Ngồi, Đổi. Chạm vào ô đạn cũng đổi súng. Nút ≡ ở góc trên phải mở bảng thành tích.
+  - Máy rung nhẹ khi trúng đạn (Android).
 
 ## Trong thư mục có gì
 

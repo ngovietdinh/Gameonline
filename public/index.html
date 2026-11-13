@@ -1,0 +1,1659 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>html, body { margin: 0; } img { max-width: 100%; } [hidden] { display: none !important; }</style>
+</head>
+<body>
+<title>Hẻm Mưa</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600&family=Saira+Condensed:wght@500;800&display=swap">
+<style>
+  /* Bố cục: khung 3D phủ kín; tựa và nút nằm góc dưới trái như màn hình tựa phim; HUD mảnh ở bốn góc. */
+  :root {
+    color-scheme: dark;
+    --night: #06080c;
+    --ink: #eef2f6;
+    --muted: #aab5c2;
+    --neon: #ff3d86;
+    --neon-ink: #1d0410;
+    --cyan: #49e2ff;
+    --hp: #ff5a66;
+    --panel: rgba(8, 11, 16, .84);
+    --line: rgba(255, 255, 255, .18);
+    --display: "Saira Condensed", "Be Vietnam Pro", system-ui, sans-serif;
+    --body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: var(--night); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+    overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  #stage { position: relative; height: 100%; overflow: hidden; }
+  #view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+
+  #hud { position: absolute; inset: 0; z-index: 2; pointer-events: none; font-variant-numeric: tabular-nums; }
+  #cross { position: absolute; left: 50%; top: 50%; --gap: 7px; }
+  #cross i { position: absolute; background: rgba(238, 242, 246, .92); box-shadow: 0 0 2px #000; }
+  #cross i:nth-child(1) { width: 2px; height: 8px; left: -1px; top: calc(-8px - var(--gap)); }
+  #cross i:nth-child(2) { width: 2px; height: 8px; left: -1px; top: var(--gap); }
+  #cross i:nth-child(3) { height: 2px; width: 8px; top: -1px; left: calc(-8px - var(--gap)); }
+  #cross i:nth-child(4) { height: 2px; width: 8px; top: -1px; left: var(--gap); }
+  #hitmark { position: absolute; left: 50%; top: 50%; width: 24px; height: 24px; margin: -12px 0 0 -12px; opacity: 0; transform: rotate(45deg); }
+  #hitmark::before, #hitmark::after { content: ""; position: absolute; background: var(--cyan); box-shadow: 0 0 6px var(--cyan); }
+  #hitmark::before { left: 11px; top: 0; width: 2px; height: 24px; clip-path: polygon(0 0, 100% 0, 100% 32%, 0 32%, 0 68%, 100% 68%, 100% 100%, 0 100%); }
+  #hitmark::after { top: 11px; left: 0; height: 2px; width: 24px; clip-path: polygon(0 0, 32% 0, 32% 100%, 0 100%, 0 0, 68% 0, 100% 0, 100% 100%, 68% 100%, 68% 0); }
+  #hurt { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, transparent 42%, rgba(255, 40, 60, .55) 100%); }
+  #dmg { position: absolute; left: 50%; top: 50%; width: 220px; height: 220px; margin: -110px 0 0 -110px; opacity: 0; border-radius: 50%;
+    border: 5px solid transparent; border-top-color: var(--hp); filter: drop-shadow(0 0 6px var(--hp)); -webkit-mask: linear-gradient(#000 0 22%, transparent 22%); mask: linear-gradient(#000 0 22%, transparent 22%); }
+
+  .tl { position: absolute; top: 12px; left: max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 2px; text-shadow: 0 1px 4px #000; }
+  .tl small { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .tl b { font-family: var(--display); font-weight: 800; font-size: 26px; line-height: 1; letter-spacing: .03em; }
+  .tl span { font-size: 13px; color: var(--muted); }
+  .tr { position: absolute; top: 10px; right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 8px; }
+  .icon-btn { pointer-events: auto; width: 44px; height: 44px; display: grid; place-items: center; touch-action: none; cursor: pointer;
+    border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 800 18px/1 var(--display); }
+  .icon-btn[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; }
+  .pause-glyph { width: 12px; height: 14px; border-left: 4px solid currentColor; border-right: 4px solid currentColor; }
+  .bl, .br { position: absolute; bottom: 16px; text-shadow: 0 2px 6px #000; }
+  .bl { left: max(16px, env(safe-area-inset-left, 0px)); display: grid; gap: 6px; width: min(220px, 44vw); }
+  .br { right: max(16px, env(safe-area-inset-right, 0px)); display: grid; justify-items: end; }
+  .bl small, .br small { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .hpnum { font-family: var(--display); font-weight: 800; font-size: 40px; line-height: .9; }
+  .bar { height: 5px; background: rgba(255,255,255,.16); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--ink); transform-origin: left; }
+  .bl.low .hpnum { color: var(--hp); } .bl.low .bar i { background: var(--hp); }
+  .br b { font-family: var(--display); font-weight: 800; font-size: 52px; line-height: .9; }
+  .br b span { font-size: 22px; color: var(--muted); font-weight: 500; }
+  .br.low b { color: var(--hp); }
+  #stage.touch .bl, #stage.touch .br { bottom: auto; top: 64px; }
+  #stage.touch .hpnum { font-size: 28px; } #stage.touch .br b { font-size: 32px; } #stage.touch .br b span { font-size: 16px; }
+  #banner { position: absolute; left: 0; right: 0; top: 20%; text-align: center; opacity: 0; transition: opacity .35s;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    font-family: var(--display); font-weight: 800; font-size: clamp(30px, 6.5vw, 56px); line-height: 1.05; letter-spacing: .08em; text-transform: uppercase;
+    text-shadow: 0 2px 14px rgba(0,0,0,.9); }
+  #banner.on { opacity: 1; }
+  #banner small { display: block; font: 600 14px var(--body); letter-spacing: .04em; text-transform: none; color: var(--muted); }
+
+  #touchUi { position: absolute; inset: 0; }
+  .tbtn { position: absolute; pointer-events: auto; touch-action: none; border-radius: 50%; cursor: pointer; display: grid; place-items: center;
+    border: 2px solid rgba(238,242,246,.55); background: rgba(8,11,16,.45); color: var(--ink); font: 800 15px/1 var(--display); letter-spacing: .03em; }
+  #fireBtn { width: 84px; height: 84px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 6px); bottom: 34px; border-color: var(--neon); color: var(--neon); font-size: 18px; }
+  #jumpBtn { width: 56px; height: 56px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 100px); bottom: 22px; }
+  #reloadBtn { width: 56px; height: 56px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 84px); bottom: 96px; }
+  #adsBtn { width: 56px; height: 56px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 10px); bottom: 132px; }
+  #adsBtn[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan); }
+  #joy { position: absolute; width: 116px; height: 116px; margin: -58px 0 0 -58px; border-radius: 50%; border: 2px solid rgba(238,242,246,.4); }
+  #knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgba(255,61,134,.6); }
+
+  .overlay { position: absolute; inset: 0; z-index: 3; display: grid; overflow-y: auto;
+    padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  #menu { align-items: end; justify-items: start; background: linear-gradient(75deg, rgba(4,6,10,.88) 0%, rgba(4,6,10,.55) 42%, rgba(4,6,10,0) 75%), linear-gradient(0deg, rgba(4,6,10,.7), rgba(4,6,10,0) 45%); }
+  .title { width: 100%; max-width: 520px; display: grid; gap: 14px; padding: clamp(0px, 3vw, 28px); }
+  .title h1 { margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(64px, 17vw, 132px); line-height: .82; letter-spacing: .01em; text-transform: uppercase;
+    color: #fff; text-shadow: 0 0 22px rgba(255,61,134,.75), 0 0 2px #fff; }
+  .title p { margin: 0; color: var(--muted); text-wrap: pretty; }
+  .title p strong { color: var(--ink); font-weight: 600; }
+  .how { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+  .how b { color: var(--ink); font-weight: 600; }
+  .load { height: 3px; background: rgba(255,255,255,.14); overflow: hidden; }
+  .load i { display: block; height: 100%; width: 0; background: var(--neon); box-shadow: 0 0 10px var(--neon); transition: width .25s; }
+  .btn { min-height: 50px; padding: 10px 22px; border: 0; border-radius: 3px; cursor: pointer; background: var(--neon); color: var(--neon-ink);
+    font: 800 20px/1.1 var(--display); letter-spacing: .08em; text-transform: uppercase; }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+  .seg button { min-width: 56px; min-height: 44px; padding: 6px 12px; border: 0; background: transparent; color: var(--muted); font: 600 13px var(--body); cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: rgba(255,255,255,.14); color: var(--ink); }
+  .seglabel { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  #pause, #over, #lobby, #room, #result { place-items: center; background: rgba(4,6,10,.62); }
+  .card { width: 100%; max-width: 440px; display: grid; gap: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 24px; }
+  .card h2 { margin: 0; font-family: var(--display); font-weight: 800; font-size: 34px; line-height: 1; letter-spacing: .06em; text-transform: uppercase; }
+  .card p { margin: 0; color: var(--muted); }
+  .row .btn { flex: 1 1 150px; }
+  .tally { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-variant-numeric: tabular-nums; }
+  .tally div { display: grid; gap: 2px; }
+  .tally small { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .tally b { font-family: var(--display); font-weight: 800; font-size: 32px; line-height: 1; }
+  .note { color: var(--cyan) !important; font-weight: 600; }
+  .card.wide { max-width: 540px; }
+  .list { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; max-height: 38vh; overflow-y: auto; }
+  .list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 3px; background: rgba(255,255,255,.04); }
+  .list li.empty { color: var(--muted); border-style: dashed; background: none; }
+  .list li div { display: grid; min-width: 0; }
+  .list li b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list li span { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .list li.me b { color: var(--cyan); }
+  .list li i { font-style: normal; font: 800 18px var(--display); color: var(--muted); min-width: 2ch; }
+  .list .btn { min-height: 44px; padding: 6px 16px; font-size: 16px; flex: none; }
+  .create { display: grid; gap: 12px; padding-top: 4px; border-top: 1px solid var(--line); }
+  .create .field { max-width: none; }
+  #timer { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font: 800 30px/1 var(--display); letter-spacing: .04em; text-shadow: 0 2px 6px #000; }
+  #timer.low { color: var(--hp); }
+  #scope { position: absolute; inset: 0; opacity: 0; background: radial-gradient(circle at 50% 50%, transparent 0, transparent 34vmin, rgba(0,0,0,.7) 34.5vmin, #000 36vmin); }
+  #scope::before, #scope::after { content: ""; position: absolute; background: rgba(0,0,0,.85); }
+  #scope::before { left: 50%; top: calc(50% - 34vmin); width: 1px; height: 68vmin; }
+  #scope::after { top: 50%; left: calc(50% - 34vmin); height: 1px; width: 68vmin; }
+  #wbar { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 6px; }
+  #wbar span { display: flex; gap: 6px; align-items: baseline; padding: 4px 9px; border: 1px solid var(--line); border-radius: 3px; background: rgba(8,11,16,.55); font-size: 12px; color: var(--muted); white-space: nowrap; }
+  #wbar span b { font: 800 13px var(--display); }
+  #wbar span.on { color: var(--ink); border-color: var(--cyan); }
+  #wbar span.on b { color: var(--cyan); }
+  #stage.touch #wbar { display: none; }
+  @media (max-width: 760px) { #wbar span { font-size: 0; gap: 0; padding: 4px 8px; } #wbar span b { font-size: 13px; } }
+  #swapBtn { width: 56px; height: 56px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 76px); bottom: 164px; }
+  .field { display: grid; gap: 6px; max-width: 280px; }
+  .field span { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .field input { width: 100%; min-height: 46px; padding: 8px 12px; border-radius: 3px; border: 1px solid var(--line); background: rgba(0,0,0,.4); color: var(--ink);
+    font: 600 16px var(--body); -webkit-user-select: text; user-select: text; }
+  .btn.alt { background: var(--cyan); color: #04181d; }
+  #netNote { font-size: 13px; }
+  #board { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 13px; min-width: 170px; }
+  #board li { display: flex; justify-content: space-between; gap: 10px; }
+  #board li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; color: var(--ink); }
+  #board li b { font: 600 13px var(--body); letter-spacing: 0; }
+  #board li.me span, #board li.me b { color: var(--cyan); }
+  #stage.touch #board { display: none; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  @media (max-width: 480px) { .card { padding: 20px; } }
+</style>
+
+<div id="stage">
+  <canvas id="view" tabindex="0" aria-label="Màn chơi Hẻm Mưa"></canvas>
+
+  <div id="hud" hidden>
+    <div id="scope"></div>
+    <div id="hurt"></div>
+    <div id="dmg"></div>
+    <div id="cross"><i></i><i></i><i></i><i></i></div>
+    <div id="hitmark"></div>
+    <div class="tl"><small id="objLabel">Đợt 1</small><b id="scoreTxt">0</b><span id="leftTxt">Còn 0 mục tiêu</span><ol id="board" hidden></ol></div>
+    <div class="tr">
+      <button class="icon-btn" id="soundBtn" type="button" aria-label="Âm thanh" aria-pressed="true">♪</button>
+      <button class="icon-btn" id="pauseBtn" type="button" aria-label="Tạm dừng"><span class="pause-glyph"></span></button>
+    </div>
+    <div class="bl" id="hpBox"><small>Máu</small><div class="hpnum" id="hpTxt">100</div><div class="bar"><i id="hpBar"></i></div></div>
+    <div class="br" id="ammoBox"><small id="gunTxt">Các-bin</small><b><i id="ammoTxt" style="font-style:normal">30</i><span id="magTxt"> / 30</span></b></div>
+    <div id="timer" hidden>0:00</div>
+    <div id="wbar"></div>
+    <div id="banner"></div>
+    <div id="touchUi" hidden>
+      <div id="joy" hidden><div id="knob"></div></div>
+      <button class="tbtn" id="swapBtn" type="button" aria-label="Đổi súng">Đổi</button>
+      <button class="tbtn" id="adsBtn" type="button" aria-label="Ngắm" aria-pressed="false">Ngắm</button>
+      <button class="tbtn" id="reloadBtn" type="button" aria-label="Nạp đạn">Nạp</button>
+      <button class="tbtn" id="jumpBtn" type="button" aria-label="Nhảy">Nhảy</button>
+      <button class="tbtn" id="fireBtn" type="button" aria-label="Bắn">Bắn</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="menu">
+    <div class="title">
+      <h1>Hẻm<br>Mưa</h1>
+      <p>Nửa đêm, một con hẻm đang mưa. Đàn máy bay tuần tra bay vào từ trên mái. <strong>Giữ hẻm qua từng đợt.</strong></p>
+      <ul class="how">
+        <li><b>Máy tính:</b> WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, phím 1 đến 5 hoặc lăn chuột để đổi súng, Shift chạy nhanh, Space nhảy.</li>
+        <li><b>Điện thoại:</b> kéo nửa trái để chạy, kéo nửa phải để ngắm, giữ nút Bắn.</li>
+        <li><b>Đấu nhiều người:</b> mọi người mở chung địa chỉ này, bấm nút đấu rồi tạo phòng hoặc vào phòng có sẵn. Hết giờ thì ai hạ nhiều nhất thắng.</li>
+      </ul>
+      <div class="load" id="loadBar"><i id="loadFill"></i></div>
+      <label class="field" for="nick"><span>Tên trong trận</span><input id="nick" type="text" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Khách"></label>
+      <div class="row">
+        <button class="btn" id="startBtn" type="button" disabled>Đang dựng hẻm</button>
+        <button class="btn alt" id="pvpBtn" type="button" disabled>Đấu mạng LAN</button>
+        <span class="seglabel">Đồ họa</span>
+        <div class="seg" id="qSeg">
+          <button type="button" data-q="high" aria-pressed="false">Cao</button>
+          <button type="button" data-q="mid" aria-pressed="false">Vừa</button>
+          <button type="button" data-q="low" aria-pressed="false">Thấp</button>
+        </div>
+      </div>
+      <p id="netNote">Đang nối máy chủ…</p>
+      <p class="note" id="menuNote" hidden></p>
+    </div>
+  </div>
+
+  <div class="overlay" id="lobby" hidden>
+    <div class="card wide">
+      <h2>Phòng đấu</h2>
+      <p id="lobbyAddr"></p>
+      <ul class="list" id="roomList"></ul>
+      <form class="create" id="createForm">
+        <label class="field" for="roomNameIn"><span>Tên phòng mới</span><input id="roomNameIn" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="Phòng của tao"></label>
+        <div class="row"><span class="seglabel">Thời gian</span>
+          <div class="seg" id="durSeg"><button type="button" data-v="3" aria-pressed="false">3 phút</button><button type="button" data-v="5" aria-pressed="true">5 phút</button><button type="button" data-v="10" aria-pressed="false">10 phút</button></div>
+        </div>
+        <div class="row"><span class="seglabel">Số người</span>
+          <div class="seg" id="maxSeg"><button type="button" data-v="4" aria-pressed="false">4</button><button type="button" data-v="8" aria-pressed="true">8</button><button type="button" data-v="16" aria-pressed="false">16</button></div>
+        </div>
+        <div class="row"><button class="btn alt" id="createBtn" type="submit">Tạo phòng</button><button class="btn ghost" id="lobbyBack" type="button">Quay lại</button></div>
+      </form>
+      <p class="note" id="lobbyNote" hidden></p>
+    </div>
+  </div>
+
+  <div class="overlay" id="room" hidden>
+    <div class="card wide">
+      <h2 id="roomName">Phòng</h2>
+      <p id="roomMeta"></p>
+      <ul class="list" id="playerList"></ul>
+      <p id="roomWait">Chờ chủ phòng bắt đầu trận.</p>
+      <div class="row"><button class="btn alt" id="roomStart" type="button">Bắt đầu trận</button><button class="btn ghost" id="roomLeave" type="button">Rời phòng</button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="result" hidden>
+    <div class="card wide">
+      <h2 id="resTitle">Hết giờ</h2>
+      <ol class="list" id="resList"></ol>
+      <div class="row"><button class="btn" id="resBack" type="button">Về phòng chờ</button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="pause" hidden>
+    <div class="card">
+      <h2>Tạm dừng</h2>
+      <p id="pauseNote">Bấm Chơi tiếp để khóa chuột lại.</p>
+      <div class="row"><span class="seglabel">Đồ họa</span>
+        <div class="seg" id="qSeg2">
+          <button type="button" data-q="high" aria-pressed="false">Cao</button>
+          <button type="button" data-q="mid" aria-pressed="false">Vừa</button>
+          <button type="button" data-q="low" aria-pressed="false">Thấp</button>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn" id="resumeBtn" type="button">Chơi tiếp</button>
+        <button class="btn ghost" id="restartBtn" type="button">Chơi lại</button>
+        <button class="btn ghost" id="lobbyBtn" type="button">Về sảnh</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="over" hidden>
+    <div class="card">
+      <h2>Mất hẻm</h2>
+      <div class="tally">
+        <div><small>Điểm</small><b id="oScore">0</b></div>
+        <div><small>Đợt</small><b id="oWave">1</b></div>
+        <div><small>Bắn hạ</small><b id="oKills">0</b></div>
+      </div>
+      <p class="note" id="oBest"></p>
+      <button class="btn" id="againBtn" type="button">Chơi lại</button>
+    </div>
+  </div>
+</div>
+
+<script src="three.min.js"></script>
+<script>
+(async () => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const stage = $('stage'), view = $('view');
+  const fail = msg => { $('menuNote').hidden = false; $('menuNote').textContent = msg; $('startBtn').textContent = 'Không chạy được'; $('loadBar').hidden = true; };
+  if (!window.THREE) { fail('Không tải được thư viện 3D. Kiểm tra mạng rồi mở lại trang.'); return; }
+  const T = THREE, TAU = Math.PI * 2, PI = Math.PI;
+  const clamp = (v, a, b) => v < a ? a : v > b ? b : v, lerp = (a, b, t) => a + (b - a) * t, rnd = (a, b) => a + Math.random() * (b - a);
+  const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  const fmt = n => Math.floor(n).toLocaleString('vi-VN');
+  const tick = () => new Promise(r => setTimeout(r, 0));
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  const progress = p => { $('loadFill').style.width = Math.round(p * 100) + '%'; };
+
+  /* ================= bộ dựng hình ================= */
+  let renderer;
+  try { renderer = new T.WebGLRenderer({ canvas: view, antialias: false, powerPreference: 'high-performance', stencil: false }); }
+  catch (e) { fail('Thiết bị này không bật được đồ họa 3D (WebGL).'); return; }
+  const gl2 = renderer.capabilities.isWebGL2;
+  const hdrOK = gl2 && (renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float'));
+  renderer.outputEncoding = T.sRGBEncoding;
+  renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
+  const QUAL = {
+    high: { post: true, ssao: true, refl: .5, shadow: 2048, maxPR: 1.5, rain: 2600 },
+    mid: { post: true, ssao: false, refl: .34, shadow: 1024, maxPR: 1, rain: 1500 },
+    low: { post: false, ssao: false, refl: 0, shadow: 1024, maxPR: 1, rain: 800 }
+  };
+  let qName = !hdrOK ? 'low' : coarse ? 'mid' : 'high', q = QUAL[qName], resScale = 1;
+  const scene = new T.Scene();
+  scene.fog = new T.FogExp2(0x080c13, .028);
+  const camera = new T.PerspectiveCamera(72, 1, .02, 260);
+  camera.rotation.order = 'YXZ'; scene.add(camera);
+  const aniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+
+  /* ================= chất liệu sinh bằng thuật toán ================= */
+  let sd = 20261113;
+  const sr = () => { sd = (sd + 0x6D2B79F5) | 0; let t = Math.imul(sd ^ sd >>> 15, 1 | sd); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const sra = (a, b) => a + sr() * (b - a);
+  const HN = new Float32Array(65536); for (let i = 0; i < 65536; i++) HN[i] = sr();
+  function vn(x, y, px, py) {
+    const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi;
+    const x0 = ((xi % px) + px) % px, x1 = (x0 + 1) % px, y0 = ((yi % py) + py) % py, y1 = (y0 + 1) % py;
+    const u = fx * fx * (3 - 2 * fx), v = fy * fy * (3 - 2 * fy);
+    const a = HN[(Math.imul(x0, 73856093) ^ Math.imul(y0, 19349663)) & 65535], b = HN[(Math.imul(x1, 73856093) ^ Math.imul(y0, 19349663)) & 65535];
+    const c = HN[(Math.imul(x0, 73856093) ^ Math.imul(y1, 19349663)) & 65535], d = HN[(Math.imul(x1, 73856093) ^ Math.imul(y1, 19349663)) & 65535];
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  }
+  function fbm(x, y, px, py, oct) { let s = 0, a = .5, n = 0; for (let o = 0; o < oct; o++) { s += a * vn(x, y, px, py); n += a; a *= .5; x *= 2; y *= 2; px *= 2; py *= 2; } return s / n; }
+  const mkCanvas = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+  function texOf(c, srgb, rep) {
+    const t = new T.CanvasTexture(c); if (srgb) t.encoding = T.sRGBEncoding;
+    if (rep !== false) { t.wrapS = t.wrapT = T.RepeatWrapping; } t.anisotropy = aniso; return t;
+  }
+  function genMaps(size, fn, nStr) {
+    const N = size * size, hs = new Float32Array(N), ca = mkCanvas(size, size), cr = mkCanvas(size, size), cn = mkCanvas(size, size);
+    const ga = ca.getContext('2d'), gr = cr.getContext('2d'), gn = cn.getContext('2d');
+    const ia = ga.createImageData(size, size), ir = gr.createImageData(size, size), inn = gn.createImageData(size, size), o = { r: 0, g: 0, b: 0, h: 0, ro: 1, me: 0 };
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      o.me = 0; fn((x + .5) / size, (y + .5) / size, o); const i = y * size + x, k = i * 4;
+      hs[i] = o.h; ia.data[k] = o.r * 255; ia.data[k + 1] = o.g * 255; ia.data[k + 2] = o.b * 255; ia.data[k + 3] = 255;
+      ir.data[k] = 255; ir.data[k + 1] = o.ro * 255; ir.data[k + 2] = o.me * 255; ir.data[k + 3] = 255;
+    }
+    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+      const xl = hs[y * size + (x + size - 1) % size], xr = hs[y * size + (x + 1) % size], yu = hs[((y + size - 1) % size) * size + x], yd = hs[((y + 1) % size) * size + x];
+      let nx = -(xr - xl) * nStr, ny = (yd - yu) * nStr; const l = Math.sqrt(nx * nx + ny * ny + 1), k = (y * size + x) * 4;
+      inn.data[k] = (nx / l * .5 + .5) * 255; inn.data[k + 1] = (ny / l * .5 + .5) * 255; inn.data[k + 2] = (1 / l * .5 + .5) * 255; inn.data[k + 3] = 255;
+    }
+    ga.putImageData(ia, 0, 0); gr.putImageData(ir, 0, 0); gn.putImageData(inn, 0, 0);
+    return { map: texOf(ca, true), normalMap: texOf(cn), roughnessMap: texOf(cr) };
+  }
+  try { await Promise.race([document.fonts.load('800 64px "Saira Condensed"'), new Promise(r => setTimeout(r, 1500))]); } catch (e) {}
+  progress(.05); await tick();
+
+  const TX = {};
+  TX.asphalt = genMaps(512, (u, v, o) => {
+    const g = fbm(u * 64, v * 64, 64, 64, 3), big = fbm(u * 6, v * 6, 6, 6, 4), sp = vn(u * 200, v * 200, 200, 200);
+    const cr = Math.abs(fbm(u * 9 + 3, v * 9, 9, 9, 4) - .5), ck = cr < .012 ? 1 - cr / .012 : 0;
+    const c = .2 + g * .1 + big * .1 + (sp > .82 ? .1 : 0) - ck * .13;
+    o.r = c; o.g = c; o.b = c * 1.05; o.h = g * .6 + sp * .3 + big * .3 - ck * 1.3; o.ro = clamp(.7 + g * .22 - ck * .1, 0, 1);
+  }, 3.2);
+  progress(.14); await tick();
+  TX.plaster = genMaps(512, (u, v, o) => {
+    const big = fbm(u * 4, v * 4, 4, 4, 5), fine = fbm(u * 56, v * 56, 56, 56, 3), st = fbm(u * 26, v * 2, 26, 2, 4), st2 = fbm(u * 9 + 5, v * 3, 9, 3, 4);
+    const stain = smooth(.5, .78, st) * .6 + smooth(.55, .8, st2) * .35, peel = smooth(.62, .66, big);
+    const cr = Math.abs(fbm(u * 7, v * 7 + 2, 7, 7, 4) - .5), ck = cr < .008 ? 1 - cr / .008 : 0;
+    let c = .86 + fine * .1 - stain * .42 - smooth(.42, .2, big) * .2 - ck * .3;
+    c = lerp(c, .46 + fine * .16, peel);
+    o.r = c; o.g = c + stain * .03; o.b = c - stain * .02; o.h = fine * .45 + big * .5 - peel * .55 - ck * .9; o.ro = clamp(.86 - stain * .38 + fine * .08, .2, 1);
+  }, 1.4);
+  progress(.24); await tick();
+  TX.concrete = genMaps(256, (u, v, o) => {
+    const big = fbm(u * 5, v * 5, 5, 5, 5), fine = fbm(u * 60, v * 60, 60, 60, 3), pit = vn(u * 90, v * 90, 90, 90), st = fbm(u * 14, v * 2, 14, 2, 3);
+    const c = .5 + big * .2 + fine * .1 - (pit > .86 ? .14 : 0) - smooth(.55, .8, st) * .2;
+    o.r = c; o.g = c; o.b = c * 1.02; o.h = fine * .5 + big * .4 - (pit > .86 ? .8 : 0); o.ro = clamp(.8 + fine * .12 - smooth(.55, .8, st) * .3, 0, 1);
+  }, 2.4);
+  TX.brick = genMaps(512, (u, v, o) => {
+    const rows = 12, cols = 5, ry = v * rows, row = Math.floor(ry), bx = u * cols + (row % 2) * .5, col = Math.floor(bx), fx = bx - col, fy = ry - row;
+    const m = Math.min(smooth(0, .035, fx), smooth(1, .965, fx), smooth(0, .09, fy), smooth(1, .91, fy));
+    const hv = HN[(Math.imul(col % cols, 9277) ^ Math.imul(row, 26699)) & 65535], n = fbm(u * 60, v * 60, 60, 60, 3), big = fbm(u * 5, v * 5, 5, 5, 4);
+    const br = .55 + hv * .3 + n * .12 - smooth(.5, .2, big) * .25;
+    o.r = lerp(.42, br * .86, m); o.g = lerp(.4, br * .4, m); o.b = lerp(.38, br * .3, m);
+    o.h = m * (.8 + n * .3 + hv * .15); o.ro = clamp(lerp(.95, .78 + n * .15, m), 0, 1);
+  }, 3);
+  progress(.36); await tick();
+  TX.sheet = genMaps(256, (u, v, o) => {
+    const rib = .5 + .5 * Math.sin(v * TAU * 14), n = fbm(u * 8, v * 8, 8, 8, 4), fine = fbm(u * 70, v * 70, 70, 70, 2), st = fbm(u * 3, v * 24, 3, 24, 3);
+    const rust = smooth(.56, .74, n) * .9 + smooth(.62, .85, st) * .4, rr = clamp(rust, 0, 1);
+    o.r = lerp(.8 - fine * .1, .42, rr); o.g = lerp(.8 - fine * .1, .22, rr); o.b = lerp(.8 - fine * .1, .12, rr);
+    o.h = rib * 1.4 + fine * .15 - rr * .1; o.ro = clamp(lerp(.42 + fine * .15, .92, rr), 0, 1); o.me = lerp(.35, 0, rr);
+  }, 2.4);
+  TX.wood = genMaps(256, (u, v, o) => {
+    const g = fbm(u * 3, v * 40, 3, 40, 4), n = fbm(u * 30, v * 30, 30, 30, 3), pl = Math.abs(((u * 5) % 1) - .5) < .03 ? 1 : 0;
+    const c = .5 + g * .32 - n * .1 - pl * .3;
+    o.r = c * .78; o.g = c * .56; o.b = c * .36; o.h = g * .5 + n * .2 - pl; o.ro = clamp(.72 + n * .2, 0, 1);
+  }, 2);
+  TX.scratch = genMaps(256, (u, v, o) => {
+    const s = fbm(u * 3, v * 120, 3, 120, 3), n = fbm(u * 40, v * 40, 40, 40, 3), w = fbm(u * 5, v * 5, 5, 5, 3);
+    o.r = o.g = o.b = .9 + n * .1; o.h = s * .4 + n * .3; o.ro = clamp(.32 + s * .2 + smooth(.5, .8, w) * .25, 0, 1); o.me = 1;
+  }, .7);
+  // mặt nạ vũng nước, lấy mẫu theo tọa độ thế giới
+  const pudC = mkCanvas(256, 256), pudG = pudC.getContext('2d'), pudI = pudG.createImageData(256, 256);
+  for (let y = 0; y < 256; y++) for (let x = 0; x < 256; x++) { const k = (y * 256 + x) * 4, v = fbm(x / 256 * 5, y / 256 * 5, 5, 5, 4) * 255; pudI.data[k] = pudI.data[k + 1] = pudI.data[k + 2] = v; pudI.data[k + 3] = 255; }
+  pudG.putImageData(pudI, 0, 0); const pudTex = texOf(pudC, false);
+  progress(.46); await tick();
+
+  function radialTex(size, stops) {
+    const c = mkCanvas(size, size), g = c.getContext('2d'), gr = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    stops.forEach(s => gr.addColorStop(s[0], s[1])); g.fillStyle = gr; g.fillRect(0, 0, size, size); return texOf(c, true, false);
+  }
+  const softTex = radialTex(64, [[0, 'rgba(255,255,255,1)'], [.3, 'rgba(255,255,255,.55)'], [1, 'rgba(255,255,255,0)']]);
+  const glowTex = radialTex(128, [[0, 'rgba(255,255,255,1)'], [.08, 'rgba(255,255,255,.7)'], [.3, 'rgba(255,255,255,.16)'], [1, 'rgba(255,255,255,0)']]);
+  function signTex(text, color, w, h, vertical) {
+    const c = mkCanvas(w, h), g = c.getContext('2d'); g.fillStyle = '#040508'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = color; g.lineWidth = 5; g.shadowColor = color; g.shadowBlur = 16; g.strokeRect(12, 12, w - 24, h - 24);
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    const draw = (s, x, y, size) => {
+      g.font = `800 ${size}px "Saira Condensed", system-ui, sans-serif`;
+      g.shadowBlur = 26; g.fillStyle = color; g.fillText(s, x, y); g.fillText(s, x, y);
+      g.shadowBlur = 5; g.fillStyle = 'rgba(255,255,255,.88)'; g.fillText(s, x, y);
+    };
+    if (vertical) { const ch = [...text], n = ch.length, st = (h - 50) / n, size = Math.min(w * .8, st * 1.02); ch.forEach((s, i) => { if (s !== ' ') draw(s, w / 2, 28 + st * (i + .5), size); }); }
+    else { let size = h * .68; g.font = `800 ${size}px "Saira Condensed", system-ui, sans-serif`; const tw = g.measureText(text).width; if (tw > w - 56) size *= (w - 56) / tw; draw(text, w / 2, h / 2 + size * .04, size); }
+    return texOf(c, true, false);
+  }
+  function winTex(kind) {
+    const c = mkCanvas(128, 160), g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 160);
+    if (kind === 0) { gr.addColorStop(0, '#ffb24a'); gr.addColorStop(1, '#a8560f'); } else if (kind === 1) { gr.addColorStop(0, '#bfe6cc'); gr.addColorStop(1, '#3f6f5c'); } else { gr.addColorStop(0, '#5a86ff'); gr.addColorStop(1, '#1b2c6a'); }
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 160);
+    for (let x = 0; x < 128; x += 9) { g.fillStyle = `rgba(0,0,0,${.05 + sr() * .18})`; g.fillRect(x, 0, 5, 160); }
+    g.fillStyle = 'rgba(0,0,0,.45)'; if (kind === 1) { g.beginPath(); g.arc(88, 34, 16, 0, TAU); g.fill(); g.fillRect(86, 50, 4, 30); } else g.fillRect(14, 104, 50, 56);
+    g.fillStyle = 'rgba(0,0,0,.35)'; g.fillRect(0, 0, 128, 8);
+    return texOf(c, true, false);
+  }
+  function shopTex(hue) {
+    const c = mkCanvas(256, 192), g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 192);
+    gr.addColorStop(0, hue ? '#eaffea' : '#fff1d0'); gr.addColorStop(.5, hue ? '#9cc7a4' : '#d9a352'); gr.addColorStop(1, hue ? '#2f4a3a' : '#5a3512');
+    g.fillStyle = gr; g.fillRect(0, 0, 256, 192);
+    for (let r = 0; r < 4; r++) {
+      const y = 40 + r * 34; g.fillStyle = 'rgba(30,18,8,.75)'; g.fillRect(0, y + 24, 256, 4);
+      for (let x = 6; x < 250;) { const w = 8 + sr() * 14, h = 10 + sr() * 14; g.fillStyle = `hsl(${sr() * 360},${40 + sr() * 40}%,${30 + sr() * 35}%)`; g.fillRect(x, y + 24 - h, w, h); x += w + 2 + sr() * 5; }
+    }
+    g.fillStyle = '#ffffff'; g.shadowColor = '#fff'; g.shadowBlur = 14; g.fillRect(30, 10, 196, 5); g.shadowBlur = 0;
+    g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(96, 104, 26, 88); g.beginPath(); g.arc(109, 96, 13, 0, TAU); g.fill();
+    return texOf(c, true, false);
+  }
+  function acTex() {
+    const c = mkCanvas(128, 96), g = c.getContext('2d'); g.fillStyle = '#c4c8c4'; g.fillRect(0, 0, 128, 96);
+    g.fillStyle = '#23272a'; g.beginPath(); g.arc(46, 48, 34, 0, TAU); g.fill();
+    g.strokeStyle = '#8b908c'; g.lineWidth = 2; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; g.beginPath(); g.moveTo(46, 48); g.lineTo(46 + Math.cos(a) * 34, 48 + Math.sin(a) * 34); g.stroke(); }
+    for (let r = 10; r < 34; r += 8) { g.beginPath(); g.arc(46, 48, r, 0, TAU); g.stroke(); }
+    g.fillStyle = 'rgba(90,60,30,.35)'; for (let i = 0; i < 6; i++) g.fillRect(sr() * 128, 0, 3 + sr() * 5, 96);
+    return texOf(c, true, false);
+  }
+  function stripeTex(a, b) {
+    const c = mkCanvas(128, 128), g = c.getContext('2d');
+    for (let i = 0; i < 8; i++) { g.fillStyle = i % 2 ? a : b; g.fillRect(i * 16, 0, 16, 128); }
+    for (let i = 0; i < 300; i++) { g.fillStyle = `rgba(20,15,10,${sr() * .25})`; g.fillRect(sr() * 128, sr() * 128, 2 + sr() * 14, 1 + sr() * 3); }
+    return texOf(c, true);
+  }
+
+  /* ================= vật liệu ================= */
+  const std = o => new T.MeshStandardMaterial(o);
+  const pbr = (tx, o) => std(Object.assign({ map: tx.map, normalMap: tx.normalMap, roughnessMap: tx.roughnessMap, roughness: 1 }, o));
+  const hdr = (r, g, b, o) => { const m = new T.MeshBasicMaterial(o || {}); m.color.setRGB(r, g, b); return m; };
+  const M = {
+    plasterA: pbr(TX.plaster, { color: 0xd9b46a }), plasterB: pbr(TX.plaster, { color: 0x7fa79d }), plasterC: pbr(TX.plaster, { color: 0xc4a79c }), plasterD: pbr(TX.plaster, { color: 0x94a3b4 }),
+    concrete: pbr(TX.concrete, {}), brick: pbr(TX.brick, {}),
+    shutA: pbr(TX.sheet, { color: 0x8fa3b0, metalnessMap: TX.sheet.roughnessMap, metalness: 1 }), shutB: pbr(TX.sheet, { color: 0xb07050, metalnessMap: TX.sheet.roughnessMap, metalness: 1 }),
+    wood: pbr(TX.wood, {}), frame: std({ color: 0x1d3a30, roughness: .55 }), rail: std({ color: 0x15171a, roughness: .5, metalness: .8 }),
+    ac: std({ map: acTex(), roughness: .6 }), pipe: std({ color: 0x8a9096, roughness: .55 }), glass: std({ color: 0x06090d, roughness: .06, metalness: .2, envMapIntensity: 2.2 }),
+    inox: std({ color: 0xd0d4d8, roughness: 1, metalness: 1, roughnessMap: TX.scratch.roughnessMap }), dark: std({ color: 0x08090b, roughness: .8 }),
+    rubber: std({ color: 0x07070a, roughness: .6 }), plasticR: std({ color: 0xc02a26, roughness: .32 }), plasticB: std({ color: 0x1d55b8, roughness: .32 }),
+    card: std({ color: 0x9a774e, roughness: .9, normalMap: TX.concrete.normalMap }), bag: std({ color: 0x0b0c0e, roughness: .22 }),
+    bin: pbr(TX.sheet, { color: 0x2f6b46, metalnessMap: TX.sheet.roughnessMap, metalness: 1 }),
+    cloth: [std({ color: 0xb8c4d0, roughness: 1 }), std({ color: 0x9c3b3b, roughness: 1 }), std({ color: 0x3f5f8f, roughness: 1 }), std({ color: 0xd0c08a, roughness: 1 })],
+    awn: [std({ map: stripeTex('#b0302a', '#d8d0c0'), roughness: .9, side: T.DoubleSide }), std({ map: stripeTex('#1f5a8a', '#d0d4d0'), roughness: .9, side: T.DoubleSide }), std({ map: stripeTex('#2e6b3a', '#d6d0b8'), roughness: .9, side: T.DoubleSide })],
+    win: [hdr(1.7, 1.7, 1.7, { map: winTex(0) }), hdr(1.05, 1.05, 1.05, { map: winTex(1) }), hdr(1, 1, 1, { map: winTex(2) })],
+    shop: [hdr(1.7, 1.7, 1.7, { map: shopTex(0) }), hdr(1.5, 1.5, 1.5, { map: shopTex(1) })],
+    lantern: hdr(3.4, .55, .16), lampGlow: hdr(9, 6.2, 3), ledGlow: hdr(5, 6.5, 9)
+  };
+  ['plasterA', 'plasterB', 'plasterC', 'plasterD', 'concrete', 'brick', 'wood', 'card'].forEach(k => { M[k].envMapIntensity = .5; });
+  [TX.plaster, TX.concrete, TX.brick, TX.sheet, TX.wood].forEach(t => { t.normalMap.anisotropy = aniso; });
+  M.shutA.normalScale.set(1.6, 1.6); M.shutB.normalScale.set(1.6, 1.6);
+
+  /* ================= gộp khối tĩnh ================= */
+  const statics = [], boxes = [], cyls = [];
+  const col = (x0, x1, z0, z1, h) => boxes.push({ x0, x1, z0, z1, h: h === undefined ? 99 : h });
+  const CORN = [
+    [[1, 0, 0], [[1, -1, 1], [1, -1, -1], [1, 1, -1], [1, 1, 1]], 2, 1], [[-1, 0, 0], [[-1, -1, -1], [-1, -1, 1], [-1, 1, 1], [-1, 1, -1]], 2, 1],
+    [[0, 1, 0], [[-1, 1, 1], [1, 1, 1], [1, 1, -1], [-1, 1, -1]], 0, 2], [[0, -1, 0], [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1]], 0, 2],
+    [[0, 0, 1], [[-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]], 0, 1], [[0, 0, -1], [[1, -1, -1], [-1, -1, -1], [-1, 1, -1], [1, 1, -1]], 0, 1]
+  ];
+  const FIT = [[0, 0], [1, 0], [1, 1], [0, 1]];
+  class Batch {
+    constructor(mat, tile, opt) { this.mat = mat; this.tile = tile || 2; this.opt = opt || {}; this.p = []; this.n = []; this.u = []; this.i = []; }
+    box(w, h, d, x, y, z, ry) {
+      const c = ry ? Math.cos(ry) : 1, s = ry ? Math.sin(ry) : 0, hs = [w / 2, h / 2, d / 2], ctr = [x, y, z], t = this.tile;
+      for (const f of CORN) {
+        const base = this.p.length / 3, nx = f[0][0], ny = f[0][1], nz = f[0][2];
+        for (let k = 0; k < 4; k++) {
+          const cr = f[1][k], lx = cr[0] * hs[0], ly = cr[1] * hs[1], lz = cr[2] * hs[2], l = [lx, ly, lz];
+          this.p.push(x + lx * c + lz * s, y + ly, z - lx * s + lz * c); this.n.push(nx * c + nz * s, ny, -nx * s + nz * c);
+          if (this.opt.fit) this.u.push(FIT[k][0], FIT[k][1]); else this.u.push((l[f[2]] + ctr[f[2]]) / t, (l[f[3]] + ctr[f[3]]) / t);
+        }
+        this.i.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      }
+      return this;
+    }
+    build() {
+      if (!this.i.length) return null;
+      const g = new T.BufferGeometry();
+      g.setAttribute('position', new T.Float32BufferAttribute(this.p, 3)); g.setAttribute('normal', new T.Float32BufferAttribute(this.n, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(this.u, 2));
+      g.setIndex(this.i); g.computeBoundingSphere(); g.computeBoundingBox();
+      const m = new T.Mesh(g, this.mat); m.castShadow = this.opt.cast !== false; m.receiveShadow = this.opt.recv !== false;
+      scene.add(m); if (this.opt.solid !== false) statics.push(m); return m;
+    }
+  }
+  const B = {};
+  const nb = (name, mat, tile, opt) => (B[name] = new Batch(mat, tile, opt));
+  nb('plasterA', M.plasterA, 4.2); nb('plasterB', M.plasterB, 4.2); nb('plasterC', M.plasterC, 4.2); nb('plasterD', M.plasterD, 4.2);
+  nb('concrete', M.concrete, 2.6); nb('brick', M.brick, 3); nb('shutA', M.shutA, 1.2); nb('shutB', M.shutB, 1.2); nb('wood', M.wood, 1.4);
+  nb('frame', M.frame, 1); nb('rail', M.rail, 1); nb('ac', M.ac, 1, { fit: true }); nb('glass', M.glass, 1); nb('inox', M.inox, .8); nb('dark', M.dark, 1);
+  nb('card', M.card, 1.2); nb('bin', M.bin, 1.2); nb('plasticB', M.plasticB, 1);
+  M.cloth.forEach((m, i) => nb('cloth' + i, m, 1, { solid: false }));
+  M.win.forEach((m, i) => nb('win' + i, m, 1, { fit: true, cast: false, recv: false }));
+  M.shop.forEach((m, i) => nb('shop' + i, m, 1, { fit: true, cast: false, recv: false }));
+  function Frame(ox, oz, yaw) {
+    const c = Math.cos(yaw), s = Math.sin(yaw);
+    const F = (batch, w, h, d, u, y, n) => batch.box(w, h, d, ox + c * u + s * n, y, oz - s * u + c * n, yaw);
+    F.pos = (u, y, n) => new T.Vector3(ox + c * u + s * n, y, oz - s * u + c * n); F.yaw = yaw; return F;
+  }
+  const add = (geo, mat, x, y, z, cast) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = cast !== false; m.receiveShadow = true; scene.add(m); return m; };
+  const neonLights = [];
+  function neon(color, p, int, dist) { const l = new T.PointLight(color, int || 1.5, dist || 10, 2); l.position.copy(p); scene.add(l); neonLights.push({ l, base: l.intensity, ph: sr() * 9 }); return l; }
+  function bladeSign(F, u, y, text, color, w, h) {
+    const tex = signTex(text, color, Math.round(256 * w / h) < 64 ? 128 : Math.min(512, Math.round(256 * w / h)), 256 * (h > w ? 2 : 1), h > w), sm = hdr(2.6, 2.6, 2.6, { map: tex });
+    const m = new T.Mesh(new T.BoxGeometry(w, h, .12), [M.dark, M.dark, M.dark, M.dark, sm, sm]);
+    m.position.copy(F.pos(u, y, w / 2 + .3)); m.rotation.y = F.yaw - PI / 2; scene.add(m);
+    const br = new T.Mesh(new T.BoxGeometry(.05, .05, .34), M.rail); br.position.copy(F.pos(u, y + h / 2 - .1, .16)); br.rotation.y = F.yaw; scene.add(br);
+    neon(color, F.pos(u, y, w + .9));
+  }
+  function flatSign(F, u, y, text, color, w, h, light) {
+    const tex = signTex(text, color, 512, Math.round(512 * h / w)), sm = hdr(2.6, 2.6, 2.6, { map: tex });
+    const m = new T.Mesh(new T.BoxGeometry(w, h, .1), [M.dark, M.dark, M.dark, M.dark, sm, M.dark]);
+    m.position.copy(F.pos(u, y, .08)); m.rotation.y = F.yaw; scene.add(m);
+    if (light !== false) neon(color, F.pos(u, y - .3, 1.3));
+  }
+  function win(F, u, y, lit) {
+    F(B.frame, 1.36, .1, .12, u, y + .78, .06); F(B.frame, 1.36, .1, .12, u, y - .78, .06); F(B.frame, .1, 1.46, .12, u - .63, y, .06); F(B.frame, .1, 1.46, .12, u + .63, y, .06);
+    F(lit >= 0 ? B['win' + lit] : B.glass, 1.16, 1.46, .04, u, y, .04); F(B.frame, .045, 1.46, .05, u, y, .075); F(B.frame, 1.16, .045, .05, u, y + .22, .075);
+    F(B.concrete, 1.56, .07, .24, u, y - .87, .12);
+  }
+  function balcony(F, u, y, w) {
+    F(B.concrete, w, .12, 1, u, y, .5); F(B.rail, w, .05, .05, u, y + 1, .97); F(B.rail, w, .04, .04, u, y + .14, .97);
+    F(B.rail, .05, .05, .95, u - w / 2 + .03, y + 1, .5); F(B.rail, .05, .05, .95, u + w / 2 - .03, y + 1, .5);
+    const n = Math.floor(w / .15); for (let i = 0; i <= n; i++) F(B.rail, .024, .86, .024, u - w / 2 + .03 + i * (w - .06) / n, y + .57, .97);
+    for (const s of [-1, 1]) for (let i = 1; i < 6; i++) F(B.rail, .024, .86, .024, u + s * (w / 2 - .03), y + .57, i * .16);
+    if (sr() < .6) { const k = 2 + (sr() * 3 | 0); for (let i = 0; i < k; i++) F(B['cloth' + (sr() * 4 | 0)], .42 + sr() * .2, .55 + sr() * .3, .02, u - w / 2 + .5 + i * .62, y + .62, 1.02); }
+  }
+  function acUnit(F, u, y) { F(B.ac, .86, .58, .32, u, y, .2); F(B.rail, .9, .04, .36, u, y - .31, .18); pipeV(F, u + .5, y - 2.4, y - .1, .025, .06); }
+  function pipeV(F, u, y0, y1, r, n) { const p = F.pos(u, (y0 + y1) / 2, n); add(new T.CylinderGeometry(r, r, y1 - y0, 8), M.pipe, p.x, p.y, p.z); }
+  function awning(F, u, w, mat) {
+    const m = new T.Mesh(new T.BoxGeometry(w, .04, 1.5), mat); m.position.copy(F.pos(u, 3.02, .78)); m.rotation.order = 'YXZ'; m.rotation.y = F.yaw; m.rotation.x = .32;
+    m.castShadow = true; m.receiveShadow = true; scene.add(m); statics.push(m);
+    for (const s of [-1, 1]) { const r = new T.Mesh(new T.CylinderGeometry(.015, .015, 1.5, 6), M.rail); r.position.copy(F.pos(u + s * (w / 2 - .05), 2.98, .78)); r.rotation.order = 'YXZ'; r.rotation.y = F.yaw; r.rotation.x = .32 + PI / 2; scene.add(r); }
+  }
+  function ground(F, kind, u, bw) {
+    const w = bw - .7;
+    if (kind === 'shut') {
+      F(sr() < .5 ? B.shutA : B.shutB, w, 2.9, .08, u, 1.45, .03); F(B.rail, w + .24, .34, .3, u, 3.07, .15);
+      F(B.concrete, .16, 3.2, .16, u - w / 2 - .08, 1.6, .08); F(B.concrete, .16, 3.2, .16, u + w / 2 + .08, 1.6, .08);
+    } else if (kind === 'shop') {
+      F(B['shop' + (sr() * 2 | 0)], w, 2.7, .04, u, 1.35, .02); F(B.frame, w + .2, .16, .2, u, 2.78, .1);
+      F(B.frame, .12, 2.8, .2, u - w / 2 - .06, 1.4, .1); F(B.frame, .12, 2.8, .2, u + w / 2 + .06, 1.4, .1); F(B.concrete, w + .3, .14, .5, u, .07, .25);
+      awning(F, u, w + .5, M.awn[sr() * 3 | 0]);
+    } else if (kind === 'door') {
+      F(B.wood, 1, 2.2, .08, u - .5, 1.1, .03); F(B.frame, 1.16, .1, .14, u - .5, 2.25, .07); F(B.frame, .08, 2.2, .14, u - 1.04, 1.1, .07); F(B.frame, .08, 2.2, .14, u + .04, 1.1, .07);
+      F(B.rail, .04, .14, .06, u - .12, 1.05, .09); win(F, u + .95, 1.75, sr() < .5 ? (sr() * 3 | 0) : -1); F(B.concrete, 1.3, .16, .5, u - .5, .08, .25);
+    } else { if (sr() < .6) acUnit(F, u, 2.7); F(B.brick, bw - .2, 1.1, .06, u, .55, .03); }
+  }
+  function facade(F, u0, u1, H, plaster, pat) {
+    const len = u1 - u0, nbay = Math.max(1, Math.round(len / 3.4)), bw = len / nbay, mid = (u0 + u1) / 2;
+    for (let b = 0; b < nbay; b++) ground(F, pat[b % pat.length], u0 + (b + .5) * bw, bw);
+    for (let y = 3.5; y < H - .6; y += 3.1) F(B.concrete, len, .2, .18, mid, y, .09);
+    F(B.concrete, len, .2, .34, mid, H - .1, .05);
+    for (let fl = 0; 3.5 + fl * 3.1 + 2.9 < H; fl++) {
+      const yc = 3.5 + fl * 3.1 + 1.72;
+      for (let b = 0; b < nbay; b++) {
+        const uc = u0 + (b + .5) * bw, r = sr();
+        if (r < .1) { if (sr() < .7) acUnit(F, uc, yc - .4); continue; }
+        win(F, uc, yc, sr() < .42 ? (sr() * 3 | 0) : -1);
+        if (sr() < .36) balcony(F, uc, yc - 1.05, Math.min(2.6, bw - .5)); else if (sr() < .4) acUnit(F, uc + 1.05 > u1 - .5 ? uc - 1.05 : uc + 1.05, yc - .9);
+      }
+    }
+    pipeV(F, u0 + .14, .1, H - .3, .05, .09); if (sr() < .7) pipeV(F, u1 - .2, .1, H - .3, .04, .08);
+  }
+  const vol = (b, x0, x1, z0, z1, H) => b.box(x1 - x0, H, z1 - z0, (x0 + x1) / 2, H / 2, (z0 + z1) / 2);
+  // khối nhà
+  vol(B.plasterB, -12, -4, 7, 24, 10.5); vol(B.plasterA, -12, -4, -8, 7, 14); vol(B.plasterC, -12, -4, -24, -8, 11.5);
+  vol(B.plasterD, 4, 15, -24, -5, 13); vol(B.plasterC, 4, 15, 5, 24, 11); vol(B.plasterB, 15, 22, -9, 9, 12); vol(B.brick, -4, 4, -30, -24, 12);
+  col(-12, -4, -30, 30); col(4, 15, -30, -5); col(4, 15, 5, 30); col(15, 22, -9, 9); col(-6, 6, -30, -24); col(-6, 6, 24, 25);
+  const FL = Frame(-4, 24, PI / 2), FR = Frame(4, -24, -PI / 2), FN = Frame(4, -5, 0), FS = Frame(15, 5, PI), FB = Frame(15, -5, -PI / 2), FE = Frame(-4, -24, 0);
+  facade(FL, 0, 17, 10.5, 'B', ['shut', 'shop', 'door', 'shut', 'wall']); facade(FL, 17, 32, 14, 'A', ['shop', 'door', 'shop', 'shut']); facade(FL, 32, 48, 11.5, 'C', ['shut', 'door', 'shut', 'shop', 'wall']);
+  facade(FR, 0, 19, 13, 'D', ['wall', 'shut', 'shop', 'door', 'shut', 'shop']); facade(FR, 29, 48, 11, 'C', ['shop', 'shut', 'door', 'shut', 'wall', 'shut']);
+  facade(FN, 0, 11, 13, 'D', ['door', 'wall', 'shut']); facade(FS, 0, 11, 11, 'C', ['wall', 'door', 'wall']); facade(FB, 0, 10, 12, 'B', ['shop', 'door', 'shop']); facade(FE, 0, 8, 12, 'E', ['shut', 'shut']);
+  bladeSign(FL, 26, 5.2, 'PHỞ', '#ff2d78', 1.5, .8); bladeSign(FL, 41, 6.4, 'NHÀ NGHỈ', '#ff3a30', .8, 3.4); flatSign(FL, 5.4, 3.6, 'SỬA XE', '#ffb020', 2.6, .7);
+  bladeSign(FR, 12.5, 5, 'BIA HƠI', '#38ff7a', 1.9, .8); bladeSign(FR, 36, 6.6, 'KARAOKE', '#8a66ff', .8, 3.6);
+  flatSign(FB, 5, 4.25, 'CÀ PHÊ', '#2fd8ff', 3.6, 1); flatSign(FE, 4, 4.2, 'MỞ CỬA 24H', '#e8f0ff', 3.4, .8, false);
+  // vỉa hè, cổng sắt, nắp cống
+  B.concrete.box(.8, .07, 48, -3.6, .035, 0); B.concrete.box(.8, .07, 19, 3.6, .035, -14.5); B.concrete.box(.8, .07, 19, 3.6, .035, 14.5);
+  for (let x = -3.9; x <= 3.91; x += .2) B.rail.box(.035, 3.3, .035, x, 1.65, 24);
+  B.rail.box(8, .08, .07, 0, 3.3, 24); B.rail.box(8, .08, .07, 0, .25, 24); B.rail.box(8, .08, .07, 0, 1.8, 24); B.concrete.box(.4, 3.8, .4, -3.9, 1.9, 24); B.concrete.box(.4, 3.8, .4, 3.9, 1.9, 24);
+  add(new T.CylinderGeometry(.36, .36, .02, 24), M.shutA, .7, .011, -3.5, false); add(new T.CylinderGeometry(.36, .36, .02, 24), M.shutA, -1.2, .011, 12, false);
+  // mái: bồn nước inox, tường chắn
+  for (const [x, z, h] of [[-7, 14, 10.5], [-8, -1, 14], [-6.5, -16, 11.5], [8, -13, 13], [9, 15, 11], [18, 2, 12]]) {
+    const t = add(new T.CylinderGeometry(.62, .62, 1.5, 20), M.inox, x, h + 1.45, z); t.rotation.z = PI / 2; t.rotation.y = sr() * 3;
+    B.rail.box(1.5, .06, .9, x, h + .72, z); for (const sx of [-.6, .6]) for (const sz of [-.35, .35]) B.rail.box(.05, .7, .05, x + sx, h + .36, z + sz);
+  }
+  // đồ đạc trong hẻm
+  const crate = (x, z, s, y) => { B.wood.box(s, s, s, x, (y || 0) + s / 2, z, sr() * .3); col(x - s / 2, x + s / 2, z - s / 2, z + s / 2, (y || 0) + s); };
+  crate(-2.7, -16.5, 1); crate(-2.6, -15.3, .8); crate(-2.7, -16.4, .75, 1); crate(2.75, 16.6, 1); crate(1.7, 17.2, .8); crate(2.7, 16.7, .7, 1);
+  crate(-2.8, 5.2, .9); crate(-2.75, 5.3, .7, .9); crate(12.6, -3.6, 1); crate(13.6, -3.4, .8);
+  B.bin.box(1.8, 1.15, .9, 2.85, .58, 9.6); B.dark.box(1.86, .06, .96, 2.85, 1.18, 9.6); col(1.95, 3.75, 9.15, 10.05, 1.2);
+  B.card.box(.6, .45, .5, -3.1, .225, -4.2, .3); B.card.box(.5, .4, .45, -3.05, .65, -4.25, -.2); B.card.box(.7, .5, .6, -3, .25, -5.1, .1); col(-3.5, -2.6, -5.5, -3.9, .9);
+  for (const [x, z] of [[2.9, -9.2], [3.05, -8.45], [2.35, -8.8]]) { add(new T.CylinderGeometry(.29, .29, .9, 18), M.plasticB, x, .45, z); add(new T.CylinderGeometry(.3, .3, .03, 18), M.dark, x, .91, z, false); cyls.push({ x, z, r: .3, h: .95 }); }
+  const bagG = new T.IcosahedronGeometry(.36, 1);
+  for (const [x, z, s] of [[3.1, 6.6, 1], [2.7, 6.2, .8], [3.2, 5.9, .9], [-3.2, 16.5, 1], [-3.1, 17.2, .8]]) { const m = add(bagG, M.bag, x, .26 * s, z); m.scale.set(s, s * .72, s); m.rotation.y = sr() * 6; }
+  // cột điện, đèn đường, dây điện chằng chịt
+  const pole = (x, z) => { add(new T.CylinderGeometry(.11, .15, 8.6, 12), M.concrete, x, 4.3, z); B.rail.box(1.6, .08, .08, x, 8.1, z); B.rail.box(1.2, .08, .08, x, 7.5, z); B.dark.box(.5, .7, .36, x, 6.4, z + .25); cyls.push({ x, z, r: .17, h: 9 }); };
+  pole(-3.35, -10); pole(3.35, 13);
+  const cableG = [];
+  function cable(a, b, sag, r) {
+    const pts = []; for (let i = 0; i <= 8; i++) { const t = i / 8; pts.push(new T.Vector3(lerp(a[0], b[0], t), lerp(a[1], b[1], t) - sag * 4 * t * (1 - t), lerp(a[2], b[2], t))); }
+    const m = new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts), 16, r || .014, 5, false), M.rubber); scene.add(m); cableG.push(m);
+  }
+  for (let i = 0; i < 6; i++) cable([-3.35 + (i - 2.5) * .22, 8.14 - (i % 2) * .6, -10], [3.35 + (i - 2.5) * .22, 8.14 - (i % 2) * .6, 13], .7 + sr() * .7, .012 + sr() * .012);
+  for (let i = 0; i < 5; i++) cable([-3.35, 7.4 + sr() * .8, -10], [-4, 6 + sr() * 5, -10 + sra(-9, 9)], .3 + sr() * .5);
+  for (let i = 0; i < 5; i++) cable([3.35, 7.4 + sr() * .8, 13], [4, 6 + sr() * 4, 13 + sra(-7, 8)], .3 + sr() * .5);
+  for (let i = 0; i < 9; i++) { const z = sra(-21, 21); cable([-4, sra(6, 10), z], [4, sra(6, 10), z + sra(-3, 3)], .4 + sr() * .9, .01 + sr() * .012); }
+  cable([-3.35, 7.5, -10], [-3.35, 8.1, -22], .5, .02); cable([3.35, 7.6, 13], [3.6, 9, 23.5], .5, .02); cable([-3.35, 7.5, -10], [4, 9.5, -7], .8, .018);
+  // dây đèn lồng
+  const lanterns = [];
+  function lanternString(a, b, sag, n) {
+    cable(a, b, sag, .008);
+    for (let i = 1; i < n; i++) { const t = i / n; lanterns.push([lerp(a[0], b[0], t), lerp(a[1], b[1], t) - sag * 4 * t * (1 - t) - .2, lerp(a[2], b[2], t)]); }
+  }
+  lanternString([-4, 5.3, -2.5], [4, 5.1, -1.5], .5, 9); lanternString([-4, 5.6, 8.5], [4, 5.2, 7.5], .55, 9); lanternString([4.2, 5, -4.6], [14.8, 5.2, 4.4], .7, 12); lanternString([4.2, 5.1, 4.5], [14.8, 4.9, -4.4], .7, 12);
+  const lanG = new T.SphereGeometry(.13, 12, 9); lanG.scale(1, .86, 1);
+  const lanI = new T.InstancedMesh(lanG, M.lantern, lanterns.length), capI = new T.InstancedMesh(new T.CylinderGeometry(.05, .05, .25, 6), M.dark, lanterns.length), tmpM = new T.Matrix4();
+  lanterns.forEach((p, i) => { tmpM.makeTranslation(p[0], p[1], p[2]); lanI.setMatrixAt(i, tmpM); capI.setMatrixAt(i, tmpM); });
+  scene.add(lanI, capI);
+  const lanLight = new T.PointLight(0xff5a28, 1.1, 14, 1.6); lanLight.position.set(9.5, 4, 0); scene.add(lanLight);
+  // sân: xe hủ tiếu, bàn ghế nhựa
+  B.inox.box(1.7, .85, .8, 9.6, .78, 2.6); B.inox.box(1.9, .06, 1, 9.6, 2.15, 2.6); for (const sx of [-.8, .8]) for (const sz of [-.36, .36]) B.inox.box(.04, 1, .04, 9.6 + sx, 1.68, 2.6 + sz);
+  B.glass.box(1.6, .5, .02, 9.6, 1.47, 2.22); B.glass.box(.02, .5, .74, 8.8, 1.47, 2.6); B.glass.box(.02, .5, .74, 10.4, 1.47, 2.6);
+  add(new T.BoxGeometry(1.5, .04, .66), hdr(2.4, 1.7, .9), 9.6, 1.24, 2.6, false);
+  for (const sx of [-.6, .6]) { const w = add(new T.CylinderGeometry(.2, .2, .06, 16), M.rubber, 9.6 + sx, .2, 3.02); w.rotation.x = PI / 2; }
+  const cartSign = new T.Mesh(new T.BoxGeometry(1.7, .34, .06), [M.dark, M.dark, M.dark, M.dark, hdr(2.4, 2.4, 2.4, { map: signTex('HỦ TIẾU', '#ffd23a', 512, 104) }), M.dark]); cartSign.position.set(9.6, 2.36, 2.14); cartSign.rotation.y = PI; scene.add(cartSign);
+  col(8.7, 10.5, 2.15, 3.1, 2.2); neon(0xffb866, new T.Vector3(9.6, 1.9, 1.6), 1.5, 9);
+  const stoolG = new T.CylinderGeometry(.13, .17, .42, 10);
+  for (const [tx, tz] of [[7.2, -1.6], [11.6, -1.2]]) {
+    B.inox.box(1.1, .03, .62, tx, .72, tz); for (const sx of [-.48, .48]) for (const sz of [-.25, .25]) B.rail.box(.03, .72, .03, tx + sx, .36, tz + sz);
+    col(tx - .55, tx + .55, tz - .31, tz + .31, .75);
+    for (let i = 0; i < 4; i++) { const a = i * PI / 2 + .5 + sr() * .5; add(stoolG, i % 2 ? M.plasticR : M.plasticB, tx + Math.cos(a) * .85, .21, tz + Math.sin(a) * .62); }
+  }
+  for (const [x, z] of [[-2.9, -1.2], [-3, -.3], [-2.4, -.8], [2.9, -19], [2.5, -18.2]]) add(stoolG, sr() < .5 ? M.plasticR : M.plasticB, x, .21, z);
+  // phố xa sau cổng sắt
+  const farM = std({ color: 0x0b0e13, roughness: .9 });
+  for (const [x, z, w, h] of [[-13, 44, 14, 16], [10, 50, 16, 22], [-2, 66, 22, 30], [24, 40, 12, 14], [-26, 52, 14, 20]]) add(new T.BoxGeometry(w, h, 8), farM, x, h / 2, z, false);
+  const bokG = new T.PlaneGeometry(1, 1), BOK = [[5, 1.2, .4], [.5, 2.2, 5], [5, .5, 2.4], [5, 3.4, 1], [.6, 5, 1.6], [4.5, 4.5, 5]];
+  for (let i = 0; i < 34; i++) { const c = BOK[i % BOK.length], m = new T.Mesh(bokG, hdr(c[0] * .8, c[1] * .8, c[2] * .8)); m.position.set(sra(-16, 16), sra(.8, 9), sra(31, 58)); m.rotation.y = PI; m.scale.set(sra(.25, 1.4), sra(.15, .6), 1); scene.add(m); }
+  progress(.6); await tick();
+  for (const k in B) B[k].build();
+
+  /* ================= mặt đường ướt có phản chiếu ================= */
+  TX.asphalt.map.repeat.set(40, 40); TX.asphalt.normalMap.repeat.set(40, 40); TX.asphalt.roughnessMap.repeat.set(40, 40);
+  const FU = { tRefl: { value: null }, tPuddle: { value: pudTex }, uReflMat: { value: new T.Matrix4() }, uTime: { value: 0 }, uReflOn: { value: 0 } };
+  const floorMat = pbr(TX.asphalt, { color: 0x9aa0a8 }); floorMat.normalScale.set(1.3, 1.3);
+  floorMat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, FU);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform mat4 uReflMat; varying vec4 vRefl; varying vec3 vWPos;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvec4 wp4 = modelMatrix * vec4(transformed, 1.0); vWPos = wp4.xyz; vRefl = uReflMat * wp4;');
+    let f = sh.fragmentShader.replace('#include <common>', `#include <common>
+      uniform sampler2D tRefl; uniform sampler2D tPuddle; uniform float uTime; uniform float uReflOn; varying vec4 vRefl; varying vec3 vWPos;
+      vec2 h22(vec2 p){ vec3 a = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973)); a += dot(a, a.yzx + 33.33); return fract((a.xx + a.yz) * a.zy); }
+      vec2 rainRipple(vec2 p, float t){ vec2 c = floor(p), f = fract(p), n = vec2(0.0);
+        for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) { vec2 o = vec2(float(i), float(j)); vec2 h = h22(c + o); float tt = fract(t * 0.85 + h.x * 5.0 + h.y);
+          vec2 d = o + 0.15 + 0.7 * h - f; float l = length(d); float r = tt * 0.95; float w = sin((l - r) * 42.0) * smoothstep(0.09, 0.0, abs(l - r)) * (1.0 - tt) * (1.0 - tt); n += d / (l + 0.001) * w; }
+        return n; }`)
+      .replace('#include <map_fragment>', '#include <map_fragment>\nfloat pud = smoothstep(0.47, 0.57, texture2D(tPuddle, vWPos.xz * 0.05).r); diffuseColor.rgb *= mix(1.0, 0.4, pud);')
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor * 0.55, 0.03, pud);')
+      .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
+        vec2 rp = rainRipple(vWPos.xz * 2.4, uTime); vec3 pn = normalize((viewMatrix * vec4(rp.x * 0.3, 1.0, rp.y * 0.3, 0.0)).xyz); normal = normalize(mix(normal, pn, pud * 0.97));`);
+    if (gl2) f = f.replace('#include <tonemapping_fragment>', `if (uReflOn > 0.5) {
+        float ndv = clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0); float fr = 0.03 + 0.97 * pow(1.0 - ndv, 5.0);
+        vec3 wn = (vec4(normal, 0.0) * viewMatrix).xyz; vec2 ruv = vRefl.xy / vRefl.w + wn.xz * 0.05;
+        vec3 rc = texture2DLodEXT(tRefl, ruv, roughnessFactor * 9.0).rgb; gl_FragColor.rgb += rc * fr * mix(0.55, 1.0, pud); }
+      #include <tonemapping_fragment>`);
+    sh.fragmentShader = f;
+  };
+  const floor = new T.Mesh(new T.PlaneGeometry(120, 120), floorMat); floor.rotation.x = -PI / 2; floor.receiveShadow = true; scene.add(floor); statics.push(floor);
+
+  /* ================= bầu trời, ánh sáng ================= */
+  const skyC = mkCanvas(512, 256), skyG = skyC.getContext('2d'), sgr = skyG.createLinearGradient(0, 0, 0, 256);
+  [[0, '#05070c'], [.32, '#0a0f18'], [.46, '#1c1a20'], [.5, '#3a2a22'], [.52, '#0a0c10'], [1, '#050608']].forEach(s => sgr.addColorStop(s[0], s[1]));
+  skyG.fillStyle = sgr; skyG.fillRect(0, 0, 512, 256);
+  for (let i = 0; i < 90; i++) { skyG.fillStyle = `rgba(${40 + sr() * 30 | 0},${48 + sr() * 30 | 0},${66 + sr() * 30 | 0},${.04 + sr() * .08})`; skyG.beginPath(); skyG.ellipse(sr() * 512, sr() * 120, 30 + sr() * 80, 8 + sr() * 16, 0, 0, TAU); skyG.fill(); }
+  const skyMat = new T.MeshBasicMaterial({ map: texOf(skyC, true, false), side: T.BackSide, fog: false, depthWrite: false });
+  skyMat.color.setScalar(.7); const sky = new T.Mesh(new T.SphereGeometry(220, 24, 14), skyMat); scene.add(sky);
+  const hemi = new T.HemisphereLight(0x3a4c70, 0x15110e, .09); scene.add(hemi);
+  const bolt = new T.DirectionalLight(0xbfd2ff, 0); bolt.position.set(-20, 40, 10); scene.add(bolt);
+  function lamp(x, y, z, tx, tz, color, int, angle, shadow) {
+    const l = new T.SpotLight(color, int, 34, angle, .65, 1.3); l.position.set(x, y, z); l.target.position.set(tx, 0, tz); scene.add(l, l.target);
+    if (shadow) { l.castShadow = true; l.shadow.mapSize.set(shadow, shadow); l.shadow.bias = -.0006; l.shadow.normalBias = .03; l.shadow.camera.near = .8; l.shadow.camera.far = 34; }
+    return l;
+  }
+  const lamp1 = lamp(-2.3, 7.3, -9.4, .2, -7.5, 0xffb060, 2.4, .95, q.shadow);
+  const lamp2 = lamp(13.6, 7.6, 3.8, 8.6, -.4, 0xcfe0ff, 1.9, .85, 1024);
+  const lamp3 = new T.PointLight(0xffb060, 1.3, 16, 1.8); lamp3.position.set(2.4, 6.6, 13.4); scene.add(lamp3);
+  B.rail && add(new T.BoxGeometry(1.2, .06, .06), M.rail, -2.8, 7.55, -9.6); add(new T.BoxGeometry(.5, .12, .24), M.rail, -2.3, 7.5, -9.5);
+  add(new T.BoxGeometry(.36, .03, .16), M.lampGlow, -2.3, 7.43, -9.5, false);
+  add(new T.BoxGeometry(1, .06, .06), M.rail, 2.85, 6.85, 13.2); add(new T.BoxGeometry(.5, .12, .24), M.rail, 2.4, 6.8, 13.3); add(new T.BoxGeometry(.36, .03, .16), M.lampGlow, 2.4, 6.73, 13.3, false);
+  add(new T.BoxGeometry(.5, .3, .2), M.rail, 13.9, 7.7, 4.1); add(new T.BoxGeometry(.4, .22, .04), M.ledGlow, 13.75, 7.62, 3.96, false).lookAt(8.6, 0, -.4);
+  // chùm sáng giả thể tích
+  const coneVS = 'varying vec3 vN; varying vec3 vV; varying float vH; uniform float uLen; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = -mv.xyz; vN = normalMatrix * normal; vH = clamp(length(position) / uLen, 0.0, 1.0); gl_Position = projectionMatrix * mv; }';
+  const coneFS = 'varying vec3 vN; varying vec3 vV; varying float vH; uniform vec3 uColor; uniform float uInt; void main(){ float e = abs(dot(normalize(vN), normalize(vV))); float a = pow(e, 2.4) * (1.0 - vH) * (1.0 - vH) * uInt; gl_FragColor = vec4(uColor * a, 1.0); }';
+  function coneMat(color, int, len) { return new T.ShaderMaterial({ uniforms: { uColor: { value: new T.Color(color) }, uInt: { value: int }, uLen: { value: len } }, vertexShader: coneVS, fragmentShader: coneFS, blending: T.AdditiveBlending, depthWrite: false, transparent: true, side: T.DoubleSide }); }
+  function coneGeo(r, len) { const g = new T.ConeGeometry(r, len, 28, 1, true); g.translate(0, -len / 2, 0); g.rotateX(-PI / 2); return g; }
+  function lightCone(x, y, z, tx, ty, tz, r, len, color, int) { const m = new T.Mesh(coneGeo(r, len), coneMat(color, int, len)); m.position.set(x, y, z); m.lookAt(tx, ty, tz); scene.add(m); return m; }
+  lightCone(-2.3, 7.4, -9.5, .2, 0, -7.5, 5.4, 8.6, 0xffb060, .55); lightCone(13.7, 7.6, 3.9, 8.6, 0, -.4, 5, 9.4, 0xcfe0ff, .4); lightCone(2.4, 6.7, 13.3, 2, 0, 13, 4.6, 7.4, 0xffb060, .42);
+  const glowSprite = (x, y, z, s, r, g, b) => { const m = new T.SpriteMaterial({ map: glowTex, blending: T.AdditiveBlending, depthWrite: false, transparent: true }); m.color.setRGB(r, g, b); const sp = new T.Sprite(m); sp.position.set(x, y, z); sp.scale.set(s, s, 1); scene.add(sp); return sp; };
+  glowSprite(-2.3, 7.4, -9.5, 3.4, 1.6, 1, .45); glowSprite(2.4, 6.7, 13.3, 3, 1.4, .9, .4); glowSprite(13.75, 7.6, 3.95, 3, .9, 1.1, 1.5);
+  // môi trường phản xạ
+  progress(.7); await tick();
+  {
+    const es = new T.Scene(); es.add(new T.Mesh(new T.SphereGeometry(50, 24, 14), new T.MeshBasicMaterial({ map: skyMat.map, side: T.BackSide })));
+    const eb = (x, y, z, w, h, r, g, b) => { const m = new T.Mesh(new T.PlaneGeometry(w, h), hdr(r * .3, g * .3, b * .3, { side: T.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0, 0); es.add(m); };
+    eb(-10, 2, -2, 3, 1.6, 9, 1, 3); eb(10, 2, 3, 4, 2, .8, 5, 8); eb(-9, 3, 12, 2, 5, 9, 1.2, 1); eb(9, 2, -10, 3, 1.5, 1, 8, 3); eb(-4, 9, -8, 2, 2, 14, 9, 4); eb(8, 4, 12, 2, 5, 4, 3, 10); eb(0, 14, 4, 5, 5, .5, .7, 1.1);
+    const pm = new T.PMREMGenerator(renderer); scene.environment = pm.fromScene(es, .03).texture; pm.dispose();
+  }
+
+  /* ================= mưa ================= */
+  const RAINMAX = 2600, rseed = new Float32Array(RAINMAX * 6), rend = new Float32Array(RAINMAX * 2);
+  for (let i = 0; i < RAINMAX; i++) { const a = Math.random(), b = Math.random(), c = Math.random(); for (let k = 0; k < 2; k++) { rseed[(i * 2 + k) * 3] = a; rseed[(i * 2 + k) * 3 + 1] = b; rseed[(i * 2 + k) * 3 + 2] = c; rend[i * 2 + k] = k; } }
+  const rainGeo = new T.BufferGeometry(); rainGeo.setAttribute('position', new T.BufferAttribute(rseed, 3)); rainGeo.setAttribute('aEnd', new T.BufferAttribute(rend, 1));
+  const rainMat = new T.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uCam: { value: new T.Vector3() }, uL1: { value: new T.Vector3(-2.3, 6, -9) }, uL2: { value: new T.Vector3(13, 6, 3) }, uFlash: { value: 0 } },
+    vertexShader: `attribute float aEnd; uniform float uTime; uniform vec3 uCam; uniform vec3 uL1; uniform vec3 uL2; uniform float uFlash; varying vec3 vCol;
+      void main(){ vec3 box = vec3(24.0, 16.0, 24.0); float sp = 12.0 + position.y * 5.0; vec3 p = position * box; p.y -= uTime * sp; p.x += uTime * 1.4;
+        vec3 base = uCam - box * 0.5; base.y = uCam.y - 4.0; vec3 wp = base + mod(p - base, box);
+        wp += normalize(vec3(-1.4, sp, 0.0)) * (0.3 + position.z * 0.35) * aEnd;
+        float d1 = distance(wp, uL1), d2 = distance(wp, uL2), dc = distance(wp, uCam);
+        vec3 c = vec3(0.045, 0.055, 0.075) + vec3(1.0, 0.62, 0.3) * 0.55 / (1.0 + d1 * d1 * 0.06) + vec3(0.7, 0.85, 1.0) * 0.4 / (1.0 + d2 * d2 * 0.06) + vec3(0.6, 0.7, 1.0) * uFlash;
+        vCol = c * smoothstep(26.0, 6.0, dc) * step(0.02, wp.y) * (0.5 + 0.5 * (1.0 - aEnd));
+        gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0); }`,
+    fragmentShader: 'varying vec3 vCol; void main(){ gl_FragColor = vec4(vCol, 1.0); }', blending: T.AdditiveBlending, depthWrite: false, transparent: true
+  });
+  const rain = new T.LineSegments(rainGeo, rainMat); rain.frustumCulled = false; scene.add(rain);
+
+  /* ================= hiệu ứng: tia lửa, khói, vệt đạn, lỗ đạn, vỏ đạn ================= */
+  const PN = 420, pPos = new Float32Array(PN * 3), pCol = new Float32Array(PN * 3), pVel = new Float32Array(PN * 3), pLife = new Float32Array(PN), pMax = new Float32Array(PN), pBase = new Float32Array(PN * 3), pGrav = new Float32Array(PN);
+  for (let i = 0; i < PN; i++) pPos[i * 3 + 1] = -999;
+  const pGeo = new T.BufferGeometry(); pGeo.setAttribute('position', new T.BufferAttribute(pPos, 3)); pGeo.setAttribute('color', new T.BufferAttribute(pCol, 3));
+  const points = new T.Points(pGeo, new T.PointsMaterial({ size: .09, map: softTex, vertexColors: true, transparent: true, depthWrite: false, blending: T.AdditiveBlending }));
+  points.frustumCulled = false; scene.add(points);
+  let pi = 0;
+  function puff(x, y, z, n, col, sp, up, life, grav) {
+    for (let k = 0; k < n; k++) {
+      const i = pi; pi = (pi + 1) % PN; const a = rnd(0, TAU), e = rnd(-1, 1), s = Math.sqrt(1 - e * e), v = rnd(.25, 1) * sp;
+      pPos[i * 3] = x; pPos[i * 3 + 1] = y; pPos[i * 3 + 2] = z; pVel[i * 3] = Math.cos(a) * s * v; pVel[i * 3 + 1] = e * v + (up || 0); pVel[i * 3 + 2] = Math.sin(a) * s * v;
+      const j = rnd(.6, 1.2); pBase[i * 3] = col[0] * j; pBase[i * 3 + 1] = col[1] * j; pBase[i * 3 + 2] = col[2] * j; pLife[i] = pMax[i] = rnd(.5, 1) * (life || .5); pGrav[i] = grav === undefined ? 9 : grav;
+    }
+  }
+  const C_SPARK = [4, 2.4, .8], C_DUST = [.22, .2, .18], C_FIRE = [5, 2, .5], C_WATER = [.35, .45, .6], C_EMBER = [3, .8, .2];
+  const smokeTex = radialTex(64, [[0, 'rgba(200,205,210,.5)'], [.5, 'rgba(160,165,170,.2)'], [1, 'rgba(120,125,130,0)']]);
+  const smokes = []; for (let i = 0; i < 22; i++) { const s = new T.Sprite(new T.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0 })); s.visible = false; scene.add(s); smokes.push({ s, life: 0, max: 1, vy: 0, grow: 1 }); }
+  let si = 0;
+  function smoke(x, y, z, size, life, shade) { const o = smokes[si++ % smokes.length]; o.s.position.set(x, y, z); o.s.scale.set(size, size, 1); o.life = o.max = life; o.vy = rnd(.3, .9); o.grow = rnd(.8, 1.6); o.s.material.color.setScalar(shade || .35); o.s.material.rotation = rnd(0, TAU); o.s.visible = true; }
+  const tracers = []; for (let i = 0; i < 14; i++) { const g = new T.BufferGeometry(); g.setAttribute('position', new T.BufferAttribute(new Float32Array(6), 3)); const m = new T.LineBasicMaterial({ transparent: true, blending: T.AdditiveBlending, depthWrite: false }); m.color.setRGB(3, 2.2, 1.2); const l = new T.Line(g, m); l.frustumCulled = false; l.visible = false; scene.add(l); tracers.push({ l, life: 0 }); }
+  let ti = 0;
+  function tracer(a, b) { const t = tracers[ti++ % tracers.length], p = t.l.geometry.attributes.position; p.setXYZ(0, a.x, a.y, a.z); p.setXYZ(1, b.x, b.y, b.z); p.needsUpdate = true; t.life = .06; t.l.visible = true; }
+  const decC = mkCanvas(64, 64), dg = decC.getContext('2d'), dgr = dg.createRadialGradient(32, 32, 0, 32, 32, 30);
+  dgr.addColorStop(0, 'rgba(0,0,0,1)'); dgr.addColorStop(.16, 'rgba(8,8,8,.95)'); dgr.addColorStop(.3, 'rgba(40,36,32,.55)'); dgr.addColorStop(1, 'rgba(60,55,50,0)'); dg.fillStyle = dgr; dg.fillRect(0, 0, 64, 64);
+  dg.strokeStyle = 'rgba(10,10,10,.6)'; dg.lineWidth = 1; for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + sr(); dg.beginPath(); dg.moveTo(32 + Math.cos(a) * 5, 32 + Math.sin(a) * 5); dg.lineTo(32 + Math.cos(a + sr() * .4) * (12 + sr() * 14), 32 + Math.sin(a + sr() * .4) * (12 + sr() * 14)); dg.stroke(); }
+  const decMat = new T.MeshBasicMaterial({ map: texOf(decC, true, false), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+  const decals = []; for (let i = 0; i < 44; i++) { const m = new T.Mesh(new T.PlaneGeometry(.2, .2), decMat); m.visible = false; scene.add(m); decals.push(m); }
+  let di = 0;
+  const CASE = 26, caseI = new T.InstancedMesh(new T.CylinderGeometry(.0065, .0065, .032, 8), std({ color: 0xc9983a, metalness: 1, roughness: .32 }), CASE), cases = [];
+  caseI.frustumCulled = false; scene.add(caseI);
+  for (let i = 0; i < CASE; i++) { cases.push({ p: new T.Vector3(0, -99, 0), v: new T.Vector3(), r: new T.Euler(), w: new T.Vector3(), life: 0 }); tmpM.makeTranslation(0, -99, 0); caseI.setMatrixAt(i, tmpM); }
+  let ci = 0;
+  const fxLight = new T.PointLight(0xff8a3a, 0, 16, 1.6); scene.add(fxLight); let fxT = 0;
+
+  /* ================= súng cầm tay ================= */
+  const GS = .35, vm = new T.Group(), gun = new T.Group(); gun.scale.setScalar(GS); vm.add(gun); camera.add(vm); vm.visible = false;
+  const GM = std({ color: 0x1e2023, metalness: .55, roughness: 1, roughnessMap: TX.scratch.roughnessMap, envMapIntensity: .8 });
+  const GM2 = std({ color: 0x15171a, metalness: .85, roughness: .52 }), PM = std({ color: 0x17191c, roughness: .62, normalMap: TX.concrete.normalMap, normalScale: new T.Vector2(.25, .25) });
+  const GLV = std({ color: 0x0e0f11, roughness: .88, normalMap: TX.concrete.normalMap, normalScale: new T.Vector2(.5, .5) }), SLV = std({ color: 0x14171a, roughness: .9, normalMap: TX.plaster.normalMap, normalScale: new T.Vector2(.6, .6) });
+  const bxg = (w, h, d) => new T.BoxGeometry(w, h, d), cyg = (r1, r2, l, s, open) => new T.CylinderGeometry(r1, r2, l, s || 12, 1, !!open);
+  const gp = (par, geo, mat, x, y, z, rx, ry, rz) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx || 0, ry || 0, rz || 0); m.receiveShadow = true; par.add(m); return m; };
+  const limb = (par, a, b, r1, r2, mat) => { const va = new T.Vector3(...a), vb = new T.Vector3(...b), d = vb.clone().sub(va), m = new T.Mesh(cyg(r2, r1, d.length(), 10), mat); m.position.copy(va).addScaledVector(d, .5); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize()); par.add(m); return m; };
+  const WOOD = std({ map: TX.wood.map, normalMap: TX.wood.normalMap, color: 0xb07a44, roughness: .5 }), OLV = std({ color: 0x3a4030, roughness: .7, normalMap: TX.concrete.normalMap, normalScale: new T.Vector2(.3, .3) });
+  const lensMat = new T.MeshStandardMaterial({ color: 0x3050a0, roughness: .05, metalness: .3, transparent: true, opacity: .22, envMapIntensity: 2.5 });
+  const tubeMat = new T.MeshStandardMaterial({ color: 0x1a1c1f, metalness: .8, roughness: .45, side: T.DoubleSide });
+  const mkDot = (par, y, z) => { const d = gp(par, new T.CircleGeometry(.0016, 10), hdr(9, .6, .4, { depthTest: false, transparent: true }), 0, y, z); d.renderOrder = 5; d.visible = false; return d; };
+  const railTeeth = (par, y, z0, n) => { for (let i = 0; i < n; i++) gp(par, bxg(.034, .008, .011), GM2, 0, y, z0 + i * .021); };
+  const wgroup = () => { const g = new T.Group(); g.visible = false; gun.add(g); return g; };
+  function makeRH(par, x, y, z) {
+    const h = new T.Group(); h.position.set(x, y, z); par.add(h);
+    gp(h, bxg(.052, .09, .075), GLV, 0, -.118, .1, .32); for (let i = 0; i < 3; i++) gp(h, bxg(.056, .02, .034), GLV, 0, -.092 - i * .024, .056 + i * .008, .32); gp(h, bxg(.02, .03, .06), GLV, -.03, -.075, .09, .2);
+    limb(h, [.005, -.15, .135], [.11, -.34, .46], .036, .05, SLV); limb(h, [.005, -.14, .125], [.03, -.185, .2], .034, .036, GLV); return h;
+  }
+  function makeLH(par, x, y, z) {
+    const h = new T.Group(); h.position.set(x, y, z); par.add(h);
+    gp(h, bxg(.08, .034, .095), GLV, 0, -.048, -.3); gp(h, bxg(.022, .056, .09), GLV, .046, -.022, -.3, 0, 0, .25); gp(h, bxg(.02, .045, .034), GLV, -.046, -.02, -.275, 0, 0, -.25);
+    limb(h, [-.01, -.06, -.27], [-.26, -.3, .16], .036, .05, SLV); limb(h, [-.005, -.055, -.28], [-.05, -.1, -.2], .034, .036, GLV); return h;
+  }
+  // 1. Các-bin
+  const w0 = wgroup();
+  gp(w0, bxg(.052, .062, .27), GM, 0, 0, -.02); gp(w0, bxg(.046, .05, .2), GM, 0, -.052, 0); gp(w0, bxg(.03, .012, .27), GM2, 0, .037, -.02); railTeeth(w0, .046, -.145, 13);
+  gp(w0, cyg(.034, .034, .3, 8), PM, 0, .002, -.305, PI / 2, 0, PI / 8); gp(w0, bxg(.026, .012, .3), GM2, 0, .04, -.305); railTeeth(w0, .049, -.44, 14);
+  for (let i = 0; i < 5; i++) for (const sd2 of [-1, 1]) gp(w0, bxg(.004, .013, .034), GM2, sd2 * .0335, .002, -.2 - i * .052);
+  gp(w0, cyg(.011, .011, .26, 10), GM, 0, .002, -.56, PI / 2); gp(w0, cyg(.017, .0155, .075, 10), GM, 0, .002, -.705, PI / 2); gp(w0, cyg(.019, .019, .012, 10), GM2, 0, .002, -.675, PI / 2); gp(w0, bxg(.03, .036, .03), GM, 0, .012, -.47);
+  gp(w0, cyg(.016, .016, .2, 10), GM, 0, 0, .2, PI / 2); gp(w0, bxg(.042, .1, .15), PM, 0, -.022, .295); gp(w0, bxg(.046, .12, .02), M.rubber, 0, -.02, .378); gp(w0, bxg(.036, .03, .12), PM, 0, .03, .275);
+  gp(w0, bxg(.036, .11, .045), PM, 0, -.12, .085, .32); gp(w0, bxg(.01, .006, .075), GM2, 0, -.094, .03); gp(w0, bxg(.007, .03, .008), GM, 0, -.082, .04, .3);
+  gp(w0, bxg(.004, .022, .062), GM2, .027, .008, -.03); gp(w0, cyg(.008, .008, .02, 8), GM2, .031, 0, .06, 0, 0, PI / 2); gp(w0, bxg(.052, .01, .03), GM2, 0, .034, .125);
+  const m0 = new T.Group(); m0.position.set(0, -.075, -.045); w0.add(m0);
+  gp(m0, bxg(.026, .115, .058), GM2, 0, -.055, 0, -.1); gp(m0, bxg(.026, .085, .056), GM2, 0, -.142, .014, -.3); gp(m0, bxg(.03, .012, .062), PM, 0, -.186, .028, -.3);
+  gp(w0, bxg(.03, .022, .055), GM2, 0, .056, -.03); gp(w0, cyg(.027, .027, .078, 18, true), tubeMat, 0, .095, -.03, PI / 2);
+  gp(w0, cyg(.029, .029, .01, 18, true), GM2, 0, .095, -.068, PI / 2); gp(w0, cyg(.008, .008, .016, 8), GM2, 0, .128, -.03); gp(w0, cyg(.008, .008, .016, 8), GM2, .033, .095, -.03, 0, 0, PI / 2);
+  gp(w0, new T.CircleGeometry(.025, 18), lensMat, 0, .095, -.066, 0, PI); gp(w0, cyg(.014, .016, .09, 10), GM2, .052, 0, -.37, PI / 2); gp(w0, bxg(.02, .02, .03), GM2, .04, 0, -.37);
+  const dotA = mkDot(w0, .095, -.03); makeRH(w0, 0, 0, 0); const lh0 = makeLH(w0, 0, 0, 0);
+  // 2. Tiểu liên
+  const w1 = wgroup();
+  gp(w1, bxg(.05, .075, .3), GM, 0, 0, -.02); gp(w1, bxg(.03, .01, .28), GM2, 0, .042, -.02); railTeeth(w1, .05, -.15, 13);
+  gp(w1, cyg(.025, .025, .15, 8), PM, 0, .004, -.245, PI / 2, 0, PI / 8); gp(w1, cyg(.011, .011, .07, 10), GM, 0, .004, -.35, PI / 2); gp(w1, cyg(.016, .016, .03, 10), GM2, 0, .004, -.385, PI / 2);
+  for (const sd2 of [-1, 1]) gp(w1, cyg(.006, .006, .22, 6), GM2, sd2 * .02, .012, .24, PI / 2);
+  gp(w1, bxg(.052, .09, .012), M.rubber, 0, 0, .355); gp(w1, bxg(.036, .1, .045), PM, 0, -.085, .075, .28); gp(w1, bxg(.01, .006, .07), GM2, 0, -.058, .02); gp(w1, cyg(.016, .014, .09, 8), PM, 0, -.085, -.2);
+  gp(w1, bxg(.004, .02, .05), GM2, .026, .012, -.03);
+  const m1 = new T.Group(); m1.position.set(0, -.04, -.05); w1.add(m1); gp(m1, bxg(.024, .2, .04), GM2, 0, -.1, 0, -.06);
+  gp(w1, bxg(.028, .02, .05), GM2, 0, .058, -.03); gp(w1, cyg(.022, .022, .06, 16, true), tubeMat, 0, .088, -.03, PI / 2); gp(w1, new T.CircleGeometry(.02, 16), lensMat, 0, .088, -.058, 0, PI);
+  const dotB = mkDot(w1, .088, -.03); makeRH(w1, 0, .033, -.025); const lh1 = makeLH(w1, 0, -.04, .1);
+  // 3. Hoa cải
+  const w2 = wgroup();
+  gp(w2, cyg(.014, .014, .62, 10), GM, 0, .022, -.43, PI / 2); gp(w2, cyg(.0135, .0135, .5, 10), GM2, 0, -.01, -.39, PI / 2); gp(w2, bxg(.008, .005, .6), GM2, 0, .038, -.43); gp(w2, new T.SphereGeometry(.005, 8, 6), hdr(1.4, 1.4, 1.2), 0, .044, -.73);
+  gp(w2, bxg(.05, .078, .26), GM, 0, .004, -.02); gp(w2, bxg(.004, .022, .07), GM2, .027, .012, -.04);
+  gp(w2, bxg(.04, .07, .12), WOOD, 0, -.035, .15, .45); gp(w2, bxg(.044, .085, .26), WOOD, 0, -.04, .32, -.1); gp(w2, bxg(.048, .1, .02), M.rubber, 0, -.052, .455); gp(w2, bxg(.01, .006, .07), GM2, 0, -.045, .04);
+  const pump = new T.Group(); w2.add(pump); gp(pump, cyg(.029, .029, .17, 10), WOOD, 0, -.008, -.33, PI / 2); for (let i = 0; i < 5; i++) gp(pump, cyg(.0305, .0305, .008, 10), GM2, 0, -.008, -.39 + i * .03, PI / 2);
+  makeRH(w2, 0, .075, .06); const lh2 = makeLH(pump, 0, .003, -.03);
+  // 4. Súng tỉa
+  const w3 = wgroup();
+  gp(w3, bxg(.05, .07, .46), OLV, 0, -.025, .06); gp(w3, bxg(.046, .05, .36), OLV, 0, -.02, -.33); gp(w3, bxg(.04, .035, .14), OLV, 0, .028, .26); gp(w3, bxg(.05, .12, .03), M.rubber, 0, -.03, .3);
+  gp(w3, bxg(.036, .1, .045), OLV, 0, -.1, .13, .35); gp(w3, bxg(.01, .006, .07), GM2, 0, -.064, .06);
+  gp(w3, cyg(.0125, .011, .66, 10), GM, 0, .014, -.6, PI / 2); gp(w3, cyg(.02, .02, .075, 10), GM2, 0, .014, -.95, PI / 2); for (let i = 0; i < 3; i++) gp(w3, bxg(.044, .008, .008), GM, 0, .014, -.93 - i * .018);
+  gp(w3, cyg(.022, .022, .26, 12), GM, 0, .02, -.03, PI / 2);
+  const sBolt = new T.Group(); sBolt.position.set(0, .02, .08); w3.add(sBolt); gp(sBolt, cyg(.006, .006, .055, 6), GM2, .04, -.012, 0, 0, 0, PI / 2 + .5); gp(sBolt, new T.SphereGeometry(.012, 8, 6), GM2, .066, -.028, 0);
+  const m3 = new T.Group(); m3.position.set(0, -.06, -.03); w3.add(m3); gp(m3, bxg(.03, .06, .075), GM2, 0, -.03, 0);
+  gp(w3, cyg(.02, .02, .3, 14), GM2, 0, .078, -.03, PI / 2); gp(w3, cyg(.021, .03, .09, 14), GM2, 0, .078, -.22, PI / 2); gp(w3, cyg(.026, .021, .06, 14), GM2, 0, .078, .14, PI / 2);
+  gp(w3, new T.CircleGeometry(.029, 16), lensMat, 0, .078, -.266, 0, PI); gp(w3, cyg(.009, .009, .02, 8), GM2, 0, .106, -.03); gp(w3, cyg(.009, .009, .02, 8), GM2, .028, .078, -.03, 0, 0, PI / 2);
+  for (const z of [-.1, .04]) gp(w3, bxg(.03, .05, .02), GM, 0, .055, z);
+  for (const sd2 of [-1, 1]) gp(w3, cyg(.005, .005, .22, 6), GM2, sd2 * .022, -.05, -.38, PI / 2);
+  makeRH(w3, 0, .02, .045); const lh3 = makeLH(w3, 0, -.012, -.03);
+  // 5. Súng lục
+  const w4 = wgroup();
+  const slide = new T.Group(); w4.add(slide); gp(slide, bxg(.03, .036, .2), GM, 0, .02, -.06); for (let i = 0; i < 5; i++) gp(slide, bxg(.032, .026, .004), GM2, 0, .02, .01 + i * .009); gp(slide, bxg(.006, .008, .008), GM2, 0, .042, -.15); gp(slide, bxg(.02, .008, .008), GM2, 0, .042, .03);
+  gp(w4, bxg(.028, .024, .16), GM2, 0, -.008, -.05); gp(w4, cyg(.007, .007, .02, 8), GM, 0, .02, -.165, PI / 2);
+  gp(w4, bxg(.03, .105, .046), PM, 0, -.068, .032, .2); gp(w4, bxg(.008, .005, .06), GM2, 0, -.04, -.02); gp(w4, bxg(.006, .02, .006), GM, 0, -.028, -.005, .3);
+  const m4 = new T.Group(); m4.position.set(0, -.06, .03); w4.add(m4); gp(m4, bxg(.022, .1, .034), GM, 0, -.012, 0, .2);
+  makeRH(w4, 0, .05, -.068); const lh4 = makeLH(w4, -.012, -.052, .335);
+  const WEAPONS = [
+    { name: 'Các-bin', g: w0, magG: m0, magY: -.075, lh: lh0, dot: dotA, mag: 30, rate: 11, dmg: 15, pellets: 1, hip: .008, adsS: .0012, bloom: .0035, reload: 2, kick: .011, vk: 1, auto: true, adsFov: .62, f0: 40, f1: 90, fmin: .7, hipP: [.19, -.2, -.36], adsP: [0, -.095, -.2], my: .002, mz: -.76, ej: [.03, .012, -.03], fl: 1 },
+    { name: 'Tiểu liên', g: w1, magG: m1, magY: -.04, lh: lh1, dot: dotB, mag: 32, rate: 15, dmg: 10, pellets: 1, hip: .013, adsS: .004, bloom: .0028, reload: 1.7, kick: .007, vk: .7, auto: true, adsFov: .74, f0: 14, f1: 40, fmin: .5, hipP: [.18, -.19, -.34], adsP: [0, -.088, -.2], my: .004, mz: -.41, ej: [.03, .012, -.03], fl: .8 },
+    { name: 'Hoa cải', g: w2, lh: lh2, pump, mag: 6, rate: 1.25, dmg: 11, pellets: 9, hip: .05, adsS: .04, bloom: 0, reload: 2.6, kick: .05, vk: 1.8, auto: false, cyc: 1, adsFov: .82, f0: 6, f1: 28, fmin: .25, hipP: [.19, -.2, -.3], adsP: [0, -.046, -.2], my: .022, mz: -.75, ej: [.03, .02, -.04], fl: 1.5 },
+    { name: 'Súng tỉa', g: w3, magG: m3, magY: -.06, lh: lh3, bolt: sBolt, scope: true, mag: 5, rate: .85, dmg: 90, pellets: 1, hip: .03, adsS: .0002, bloom: 0, reload: 2.8, kick: .06, vk: 2, auto: false, cyc: 1, adsFov: .24, f0: 200, f1: 300, fmin: 1, hipP: [.19, -.2, -.26], adsP: [0, -.078, -.12], my: .014, mz: -.99, ej: [.03, .03, .04], fl: 1.4 },
+    { name: 'Súng lục', g: w4, magG: m4, magY: -.06, lh: lh4, slide, mag: 12, rate: 6.5, dmg: 22, pellets: 1, hip: .009, adsS: .003, bloom: .006, reload: 1.3, kick: .02, vk: 1.2, auto: false, adsFov: .82, f0: 18, f1: 50, fmin: .55, hipP: [.15, -.16, -.44], adsP: [0, -.044, -.36], my: .02, mz: -.19, ej: [.02, .04, -.05], fl: .7 }
+  ];
+  WEAPONS.forEach(w => { w.ammo = w.mag; w.lhB = w.lh.position.clone(); });
+  const flashTexC = mkCanvas(128, 128), fg = flashTexC.getContext('2d'); fg.translate(64, 64);
+  for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + sr(), l = 26 + sr() * 36, gr = fg.createLinearGradient(0, 0, Math.cos(a) * l, Math.sin(a) * l); gr.addColorStop(0, 'rgba(255,240,200,1)'); gr.addColorStop(1, 'rgba(255,150,40,0)'); fg.strokeStyle = gr; fg.lineWidth = 5 + sr() * 9; fg.beginPath(); fg.moveTo(0, 0); fg.lineTo(Math.cos(a) * l, Math.sin(a) * l); fg.stroke(); }
+  const fgr = fg.createRadialGradient(0, 0, 0, 0, 0, 30); fgr.addColorStop(0, 'rgba(255,255,255,1)'); fgr.addColorStop(1, 'rgba(255,180,60,0)'); fg.fillStyle = fgr; fg.fillRect(-64, -64, 128, 128);
+  const flashMat = new T.MeshBasicMaterial({ map: texOf(flashTexC, true, false), transparent: true, blending: T.AdditiveBlending, depthWrite: false }); flashMat.color.setRGB(5, 3.6, 2);
+  const flash = gp(gun, new T.PlaneGeometry(.3, .3), flashMat, 0, .002, -.78); flash.visible = false;
+  const flashLight = new T.PointLight(0xffb060, 0, 15, 1.6); scene.add(flashLight);
+  gun.traverse(o => { o.frustumCulled = false; });
+  progress(.82); await tick();
+
+  /* ================= máy bay tuần tra ================= */
+  const DM = std({ color: 0x2c3036, metalness: .75, roughness: 1, roughnessMap: TX.scratch.roughnessMap, envMapIntensity: 1 }), DK = std({ color: 0x101214, metalness: .6, roughness: .5 });
+  const DG = {
+    top: cyg(.2, .26, .1, 18), dome: new T.SphereGeometry(.26, 18, 10, 0, TAU, PI / 2, PI / 2), arm: bxg(.62, .03, .055), pod: cyg(.05, .045, .08, 10), guard: new T.TorusGeometry(.2, .011, 6, 22),
+    disc: new T.CircleGeometry(.19, 18), gim: new T.SphereGeometry(.09, 14, 10), lens: cyg(.05, .05, .03, 14), barrel: cyg(.014, .014, .26, 8), led: new T.SphereGeometry(.018, 6, 5), spike: new T.IcosahedronGeometry(.34, 0), band: new T.TorusGeometry(.33, .025, 6, 20)
+  };
+  const rotorMat = new T.MeshBasicMaterial({ color: 0x8090a0, transparent: true, opacity: .16, depthWrite: false, side: T.DoubleSide });
+  const eyeMat = hdr(7, .7, .35), eyeMat2 = hdr(8, 2.2, .3), ledG = hdr(.4, 5, 1), searchMat = coneMat(0xffe6c0, .32, 7), searchGeo = coneGeo(1.2, 7);
+  const TYPES = {
+    scout: { hp: 34, r: .6, speed: 5.4, pts: 50, keep: 9, fly: 3.2, cd: [2.1, 3.4], dmg: 7, bolt: 17, arms: 4, sc: 1 },
+    rammer: { hp: 24, r: .5, speed: 8.6, pts: 40, boom: 24 },
+    heavy: { hp: 190, r: 1.1, speed: 2.9, pts: 150, keep: 12, fly: 4.6, cd: [2.8, 3.8], dmg: 9, bolt: 20, arms: 6, sc: 1.8 }
+  };
+  function makeDrone(type) {
+    const g = new T.Group(), rotors = [], t = TYPES[type]; let aim = null;
+    const pt = (geo, mat, x, y, z, rx, ry, rz) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx || 0, ry || 0, rz || 0); m.castShadow = true; g.add(m); return m; };
+    if (type === 'rammer') {
+      pt(DG.spike, DM, 0, 0, 0); pt(DG.band, eyeMat, 0, 0, 0, PI / 2).castShadow = false; pt(DG.lens, eyeMat, 0, 0, .33, PI / 2).castShadow = false;
+      for (const s of [-1, 1]) { pt(DG.arm, DK, s * .3, .2, 0); pt(DG.pod, DK, s * .55, .24, 0); const r = pt(DG.disc, rotorMat, s * .55, .29, 0, -PI / 2); r.castShadow = false; rotors.push(r); pt(DG.guard, DK, s * .55, .28, 0, PI / 2); }
+    } else {
+      pt(DG.top, DM, 0, .04, 0); pt(DG.dome, DM, 0, .0, 0); pt(bxg(.3, .05, .34), DK, 0, .11, -.02);
+      for (let i = 0; i < t.arms; i++) {
+        const a = (i + .5) / t.arms * TAU, cx = Math.cos(a), sz = Math.sin(a);
+        pt(DG.arm, DK, cx * .42, .03, sz * .42, 0, -a, 0); pt(DG.pod, DM, cx * .72, .06, sz * .72); const r = pt(DG.disc, rotorMat, cx * .72, .115, sz * .72, -PI / 2); r.castShadow = false; rotors.push(r);
+        pt(DG.guard, DK, cx * .72, .1, sz * .72, PI / 2); pt(DG.led, i % 2 ? ledG : eyeMat, cx * .72, .0, sz * .72).castShadow = false;
+      }
+      aim = new T.Group(); aim.position.set(0, -.2, .12); g.add(aim);
+      const gm = new T.Mesh(DG.gim, DK); aim.add(gm); const ln = new T.Mesh(DG.lens, type === 'heavy' ? eyeMat2 : eyeMat); ln.rotation.x = PI / 2; ln.position.z = .08; aim.add(ln);
+      for (const s of [-1, 1]) { const b = new T.Mesh(DG.barrel, DM); b.rotation.x = PI / 2; b.position.set(s * .12, -.02, .14); aim.add(b); }
+      const cone = new T.Mesh(searchGeo, searchMat); cone.position.z = .1; aim.add(cone);
+      g.scale.setScalar(t.sc);
+    }
+    return { g, rotors, aim };
+  }
+  const boltG = new T.SphereGeometry(.09, 8, 6); boltG.scale(1, 1, 3.4);
+  const boltMat = hdr(7, 2.4, .5);
+
+  /* ================= hậu kỳ ================= */
+  const fsScene = new T.Scene(), fsCam = new T.OrthographicCamera(-1, 1, 1, -1, 0, 1), fsMesh = new T.Mesh(new T.PlaneGeometry(2, 2)); fsMesh.frustumCulled = false; fsScene.add(fsMesh);
+  const VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+  const sm = (fs, u) => new T.ShaderMaterial({ uniforms: u, vertexShader: VS, fragmentShader: fs, depthTest: false, depthWrite: false });
+  const pass = (mat, rt) => { fsMesh.material = mat; renderer.setRenderTarget(rt || null); renderer.render(fsScene, fsCam); };
+  const mSSAO = sm(`varying vec2 vUv; uniform sampler2D tDepth; uniform mat4 uProj; uniform mat4 uProjInv;
+    vec3 vpos(vec2 uv){ float d = texture2D(tDepth, uv).x; vec4 v = uProjInv * vec4(uv * 2.0 - 1.0, d * 2.0 - 1.0, 1.0); return v.xyz / v.w; }
+    void main(){ float d = texture2D(tDepth, vUv).x; if (d >= 0.9999) { gl_FragColor = vec4(1.0); return; }
+      vec3 p = vpos(vUv); vec3 n = normalize(cross(dFdx(p), dFdy(p)));
+      float rn = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715)))) * 6.2831853;
+      float radius = min(0.6, -p.z * 0.3); vec3 t = normalize(cross(n, vec3(0.0, 1.0, 0.013))); vec3 b = cross(n, t); float occ = 0.0;
+      for (int i = 0; i < 12; i++) { float fi = float(i); float a = rn + fi * 2.39996; float r = sqrt((fi + 0.5) / 12.0);
+        vec3 dir = t * cos(a) * r + b * sin(a) * r + n * sqrt(max(0.0, 1.0 - r * r)); vec3 sp = p + dir * radius * (0.3 + 0.7 * fract(fi * 0.618 + rn));
+        vec4 o = uProj * vec4(sp, 1.0); vec2 suv = o.xy / o.w * 0.5 + 0.5; float sz = vpos(suv).z;
+        occ += step(sp.z + 0.02, sz) * smoothstep(0.0, 1.0, radius / (abs(p.z - sz) + 0.0001)); }
+      gl_FragColor = vec4(vec3(pow(1.0 - occ / 12.0, 1.7)), 1.0); }`, { tDepth: { value: null }, uProj: { value: camera.projectionMatrix }, uProjInv: { value: camera.projectionMatrixInverse } });
+  const mBlur = sm(`varying vec2 vUv; uniform sampler2D tex; uniform vec2 px; void main(){ float s = 0.0; for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) s += texture2D(tex, vUv + vec2(float(i), float(j)) * px * 1.5).r; gl_FragColor = vec4(vec3(s / 9.0), 1.0); }`, { tex: { value: null }, px: { value: new T.Vector2() } });
+  const mPre = sm(`varying vec2 vUv; uniform sampler2D tex; void main(){ vec3 c = min(texture2D(tex, vUv).rgb, vec3(24.0)); float br = max(c.r, max(c.g, c.b)); float soft = clamp(br - 0.55, 0.0, 0.9); soft = soft * soft / 1.8; c *= max(soft, br - 1.0) / max(br, 0.0001); gl_FragColor = vec4(c, 1.0); }`, { tex: { value: null } });
+  const mDown = sm(`varying vec2 vUv; uniform sampler2D tex; uniform vec2 px; void main(){ vec3 s = texture2D(tex, vUv).rgb * 4.0; s += texture2D(tex, vUv - px).rgb + texture2D(tex, vUv + px).rgb + texture2D(tex, vUv + vec2(px.x, -px.y)).rgb + texture2D(tex, vUv - vec2(px.x, -px.y)).rgb; gl_FragColor = vec4(s / 8.0, 1.0); }`, { tex: { value: null }, px: { value: new T.Vector2() } });
+  const mUp = sm(`varying vec2 vUv; uniform sampler2D tex; uniform sampler2D tAdd; uniform vec2 px; void main(){ vec3 s = texture2D(tex, vUv + vec2(-px.x * 2.0, 0.0)).rgb + texture2D(tex, vUv + vec2(px.x * 2.0, 0.0)).rgb + texture2D(tex, vUv + vec2(0.0, px.y * 2.0)).rgb + texture2D(tex, vUv + vec2(0.0, -px.y * 2.0)).rgb;
+      s += (texture2D(tex, vUv + vec2(-px.x, px.y)).rgb + texture2D(tex, vUv + vec2(px.x, px.y)).rgb + texture2D(tex, vUv + vec2(px.x, -px.y)).rgb + texture2D(tex, vUv + vec2(-px.x, -px.y)).rgb) * 2.0;
+      gl_FragColor = vec4(s / 12.0 + texture2D(tAdd, vUv).rgb, 1.0); }`, { tex: { value: null }, tAdd: { value: null }, px: { value: new T.Vector2() } });
+  const mComp = sm(`varying vec2 vUv; uniform sampler2D tScene; uniform sampler2D tBloom; uniform sampler2D tAO; uniform float uAO; uniform float uExp;
+    vec3 aces(vec3 x){ return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
+    void main(){ vec2 c = vUv - 0.5; float r2 = dot(c, c); vec2 off = c * r2 * 0.016;
+      vec3 col = vec3(texture2D(tScene, vUv + off).r, texture2D(tScene, vUv).g, texture2D(tScene, vUv - off).b);
+      float lum = dot(col, vec3(0.2126, 0.7152, 0.0722)); col *= mix(1.0, texture2D(tAO, vUv).r, uAO * clamp(1.0 - lum * 0.5, 0.0, 1.0));
+      col += texture2D(tBloom, vUv).rgb * 0.11; col = aces(col * uExp);
+      float l = dot(col, vec3(0.2126, 0.7152, 0.0722)); col = mix(vec3(l), col, 1.1);
+      col += vec3(-0.010, 0.004, 0.022) * (1.0 - l) + vec3(0.018, 0.006, -0.014) * l; col = pow(max(col, 0.0), vec3(1.05));
+      col *= 1.0 - smoothstep(0.1, 0.62, r2) * 0.5;
+      gl_FragColor = vec4(pow(col, vec3(1.0 / 2.2)), 1.0); }`, { tScene: { value: null }, tBloom: { value: null }, tAO: { value: null }, uAO: { value: 1 }, uExp: { value: 1.1 } });
+  const mFXAA = sm(`varying vec2 vUv; uniform sampler2D tex; uniform vec2 px; uniform float uTime;
+    void main(){ vec3 nw = texture2D(tex, vUv + vec2(-1.0, -1.0) * px).rgb, ne = texture2D(tex, vUv + vec2(1.0, -1.0) * px).rgb, sw = texture2D(tex, vUv + vec2(-1.0, 1.0) * px).rgb, se = texture2D(tex, vUv + vec2(1.0, 1.0) * px).rgb, m = texture2D(tex, vUv).rgb;
+      vec3 L = vec3(0.299, 0.587, 0.114); float lnw = dot(nw, L), lne = dot(ne, L), lsw = dot(sw, L), lse = dot(se, L), lm = dot(m, L);
+      float lmin = min(lm, min(min(lnw, lne), min(lsw, lse))), lmax = max(lm, max(max(lnw, lne), max(lsw, lse)));
+      vec2 dir = vec2(-((lnw + lne) - (lsw + lse)), (lnw + lsw) - (lne + lse));
+      float red = max((lnw + lne + lsw + lse) * 0.03125, 0.0078125); float rcp = 1.0 / (min(abs(dir.x), abs(dir.y)) + red); dir = clamp(dir * rcp, -8.0, 8.0) * px;
+      vec3 a = 0.5 * (texture2D(tex, vUv + dir * (1.0 / 3.0 - 0.5)).rgb + texture2D(tex, vUv + dir * (2.0 / 3.0 - 0.5)).rgb);
+      vec3 b = a * 0.5 + 0.25 * (texture2D(tex, vUv + dir * -0.5).rgb + texture2D(tex, vUv + dir * 0.5).rgb); float lb = dot(b, L);
+      vec3 col = (lb < lmin || lb > lmax) ? a : b;
+      float g = fract(sin(dot(gl_FragCoord.xy + uTime * 61.0, vec2(12.9898, 78.233))) * 43758.5453) - 0.5; col += g * 0.035 * (1.0 - dot(col, L) * 0.6);
+      gl_FragColor = vec4(col, 1.0); }`, { tex: { value: null }, px: { value: new T.Vector2() }, uTime: { value: 0 } });
+  let rtScene = null, rtAO = null, rtAO2 = null, rtLDR = null, rtRefl = null, down = [], up = [];
+  const whiteTex = new T.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1, T.RGBAFormat); whiteTex.needsUpdate = true;
+  const mcam = new T.PerspectiveCamera();
+  let W = 2, H = 2;
+  function makeRTs() {
+    [rtScene, rtAO, rtAO2, rtLDR, rtRefl, ...down, ...up].forEach(r => r && r.dispose()); rtScene = rtAO = rtAO2 = rtLDR = rtRefl = null; down = []; up = [];
+    if (!q.post) return;
+    const sz = renderer.getDrawingBufferSize(new T.Vector2()), w = Math.max(4, sz.x), h = Math.max(4, sz.y), lin = { minFilter: T.LinearFilter, magFilter: T.LinearFilter, depthBuffer: false };
+    rtScene = new T.WebGLRenderTarget(w, h, { type: T.HalfFloatType, minFilter: T.LinearFilter, magFilter: T.LinearFilter, depthBuffer: true });
+    rtScene.depthTexture = new T.DepthTexture(w, h); rtScene.depthTexture.type = T.UnsignedIntType;
+    const hw = Math.max(2, w >> 1), hh = Math.max(2, h >> 1);
+    if (q.ssao) { rtAO = new T.WebGLRenderTarget(hw, hh, lin); rtAO2 = new T.WebGLRenderTarget(hw, hh, lin); }
+    for (let i = 0; i < 5; i++) down.push(new T.WebGLRenderTarget(Math.max(2, hw >> i), Math.max(2, hh >> i), Object.assign({ type: T.HalfFloatType }, lin)));
+    for (let i = 0; i < 4; i++) up.push(new T.WebGLRenderTarget(Math.max(2, hw >> i), Math.max(2, hh >> i), Object.assign({ type: T.HalfFloatType }, lin)));
+    rtLDR = new T.WebGLRenderTarget(w, h, lin);
+    if (q.refl) rtRefl = new T.WebGLRenderTarget(Math.max(4, Math.round(w * q.refl)), Math.max(4, Math.round(h * q.refl)), { type: T.HalfFloatType, minFilter: T.LinearMipmapLinearFilter, magFilter: T.LinearFilter, generateMipmaps: true, depthBuffer: true });
+    FU.tRefl.value = rtRefl ? rtRefl.texture : null; FU.uReflOn.value = rtRefl ? 1 : 0;
+  }
+  function resize() {
+    const r = stage.getBoundingClientRect(); W = Math.max(200, r.width); H = Math.max(200, r.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.maxPR) * resScale); renderer.setSize(W, H, false);
+    camera.aspect = W / H; baseFov = W < H ? 86 : 72; camera.fov = baseFov; camera.updateProjectionMatrix(); makeRTs();
+  }
+  let baseFov = 72;
+  function setQuality(name) {
+    if (name !== 'low' && !hdrOK) name = 'low';
+    qName = name; q = QUAL[name]; resScale = 1;
+    document.querySelectorAll('.seg button[data-q]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.q === qName)));
+    lamp1.shadow.mapSize.set(q.shadow, q.shadow); if (lamp1.shadow.map) { lamp1.shadow.map.dispose(); lamp1.shadow.map = null; }
+    lamp2.castShadow = name !== 'low'; rainGeo.setDrawRange(0, q.rain * 2);
+    try { localStorage.setItem('hm-q', name); } catch (e) {}
+    resize();
+  }
+  const v1 = new T.Vector3(), v2 = new T.Vector3(), v3 = new T.Vector3(), v4 = new T.Vector3(), UP = new T.Vector3(0, 1, 0);
+  let firstFrame = true;
+  function renderReflection() {
+    const c = camera.position; mcam.position.set(c.x, -c.y, c.z);
+    camera.getWorldDirection(v1); v2.set(c.x + v1.x, -(c.y + v1.y), c.z + v1.z);
+    v3.set(0, 1, 0).applyQuaternion(camera.quaternion); v3.y = -v3.y; mcam.up.copy(v3); mcam.lookAt(v2);
+    mcam.projectionMatrix.copy(camera.projectionMatrix); mcam.projectionMatrixInverse.copy(camera.projectionMatrixInverse); mcam.updateMatrixWorld(true);
+    FU.uReflMat.value.set(.5, 0, 0, .5, 0, .5, 0, .5, 0, 0, .5, .5, 0, 0, 0, 1).multiply(mcam.projectionMatrix).multiply(mcam.matrixWorldInverse);
+    const vv = vm.visible; floor.visible = false; vm.visible = false; rain.visible = false; caseI.visible = false;
+    renderer.shadowMap.autoUpdate = firstFrame; renderer.setRenderTarget(rtRefl); renderer.render(scene, mcam);
+    renderer.shadowMap.autoUpdate = true; floor.visible = true; vm.visible = vv; rain.visible = true; caseI.visible = true;
+  }
+  function renderFrame() {
+    camera.updateMatrixWorld(true);
+    if (!q.post) { renderer.toneMapping = T.ACESFilmicToneMapping; renderer.setRenderTarget(null); renderer.render(scene, camera); firstFrame = false; return; }
+    renderer.toneMapping = T.NoToneMapping;
+    if (rtRefl) renderReflection();
+    renderer.setRenderTarget(rtScene); renderer.render(scene, camera); firstFrame = false;
+    if (q.ssao) {
+      mSSAO.uniforms.tDepth.value = rtScene.depthTexture; pass(mSSAO, rtAO);
+      mBlur.uniforms.tex.value = rtAO.texture; mBlur.uniforms.px.value.set(1 / rtAO.width, 1 / rtAO.height); pass(mBlur, rtAO2);
+    }
+    mPre.uniforms.tex.value = rtScene.texture; pass(mPre, down[0]);
+    for (let i = 0; i < 4; i++) { mDown.uniforms.tex.value = down[i].texture; mDown.uniforms.px.value.set(.5 / down[i].width, .5 / down[i].height); pass(mDown, down[i + 1]); }
+    let src = down[4];
+    for (let i = 3; i >= 0; i--) { mUp.uniforms.tex.value = src.texture; mUp.uniforms.tAdd.value = down[i].texture; mUp.uniforms.px.value.set(.5 / src.width, .5 / src.height); pass(mUp, up[i]); src = up[i]; }
+    mComp.uniforms.tScene.value = rtScene.texture; mComp.uniforms.tBloom.value = up[0].texture; mComp.uniforms.tAO.value = q.ssao ? rtAO2.texture : whiteTex; mComp.uniforms.uAO.value = q.ssao ? 1 : 0; pass(mComp, rtLDR);
+    mFXAA.uniforms.tex.value = rtLDR.texture; mFXAA.uniforms.px.value.set(1 / rtLDR.width, 1 / rtLDR.height); mFXAA.uniforms.uTime.value = time % 10; pass(mFXAA, null);
+  }
+
+  /* ================= trạng thái trò chơi ================= */
+  let state = 'load', touchMode = false, lastPT = 'mouse', locked = false, lockWorked = false, dragLook = false;
+  let time = 0, wave = 0, score = 0, kills = 0, queue = [], spawnT = 0, interT = 0, enemies = [], bolts = [];
+  let best = 0; try { best = +localStorage.getItem('hm-best') || 0; } catch (e) {}
+  const P = { pos: new T.Vector3(0, 0, 18), vel: new T.Vector3(), vy: 0, ground: true, yaw: 0, pitch: 0, hp: 100, recoil: 0, recoilYaw: 0, bob: 0, since: 9, land: 0 };
+  let cur = 0, GUN = WEAPONS[0], lastW = 4, switchT = 0, fired = false, cycT = 0, cycMax = 0; GUN.g.visible = true;
+  const acc = new Map(), v5 = new T.Vector3();
+  let cd = 0, reloadT = 0, firing = false, ads = false, adsK = 0, vmKick = 0, flashT = 0, hitT = 0, hurtT = 0, dmgT = 0, dmgAng = 0, bloomS = 0, swayX = 0, swayY = 0, sprintK = 0, stepT = 0;
+  const keys = new Set(); let joyX = 0, joyY = 0, wantJump = false;
+  // đấu mạng LAN
+  const r2 = v => Math.round(v * 100) / 100;
+  const LAN = /^(localhost$|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(location.hostname) || location.hostname.endsWith('.local');
+  const SHARE = LAN ? ' Máy khác cùng mạng mở: ' : ' Gửi địa chỉ này cho người chơi khác: ';
+  let mode = 'solo', ws = null, online = false, ready = false, myId = null, nick = 'Khách', lanAddr = '';
+  let dead = false, respawnT = 0, myK = 0, myD = 0, lastHurtBy = null, presT = 0, shotEmitT = 0, boardT = 0, boardKey = '';
+  let rooms = [], room = null, matchEnd = 0, gestureAt = -1e9, ghost = false, lastBeep = 0;
+  const inMatch = () => mode === 'pvp' && (state === 'play' || state === 'pause');
+  const mmss = ms => { const sec = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); };
+  const remotes = new Map(), PARTS = [[.45, .4, 1], [1, .42, 1], [1.55, .26, 1.6]], PVP_DMG = .75;
+  const SPAWNS = [[0, 18], [0, -20], [-2.4, -6], [2.4, 8], [9, -3], [12.5, 3], [-2, 2], [2, -14]];
+  const net = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+  function resolve(p, r) {
+    for (const b of boxes) {
+      const cx = clamp(p.x, b.x0, b.x1), cz = clamp(p.z, b.z0, b.z1), dx = p.x - cx, dz = p.z - cz, d2 = dx * dx + dz * dz;
+      if (d2 >= r * r) continue;
+      if (d2 > 1e-8) { const d = Math.sqrt(d2), k = (r - d) / d; p.x += dx * k; p.z += dz * k; }
+      else { const l = p.x - b.x0, rr = b.x1 - p.x, n = p.z - b.z0, f = b.z1 - p.z, m = Math.min(l, rr, n, f); if (m === l) p.x = b.x0 - r; else if (m === rr) p.x = b.x1 + r; else if (m === n) p.z = b.z0 - r; else p.z = b.z1 + r; }
+    }
+    for (const c of cyls) { const dx = p.x - c.x, dz = p.z - c.z, d = Math.hypot(dx, dz) || .001, min = c.r + r; if (d < min) { p.x = c.x + dx / d * min; p.z = c.z + dz / d * min; } }
+  }
+  function insideSolid(x, y, z) {
+    if (y < .05) return true;
+    for (const b of boxes) if (y < b.h && x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1) return true;
+    for (const c of cyls) if (y < c.h && (x - c.x) ** 2 + (z - c.z) ** 2 < c.r * c.r) return true;
+    return false;
+  }
+  function clampAir(p, m) {
+    const inA = Math.abs(p.x) <= 4 - m && Math.abs(p.z) <= 24 - m, inC = p.x >= 4 - m && p.x <= 15 - m && Math.abs(p.z) <= 5 - m;
+    if (inA || inC) return;
+    const ax = clamp(p.x, -4 + m, 4 - m), az = clamp(p.z, -24 + m, 24 - m), cx = clamp(p.x, 4 - m, 15 - m), cz = clamp(p.z, -5 + m, 5 - m);
+    if ((p.x - ax) ** 2 + (p.z - az) ** 2 <= (p.x - cx) ** 2 + (p.z - cz) ** 2) { p.x = ax; p.z = az; } else { p.x = cx; p.z = cz; }
+  }
+
+  /* ================= âm thanh ================= */
+  let ac = null, soundOn = true, master = null, conv = null, noiseBuf = null, humGain = null;
+  function initAudio() {
+    if (ac) { if (ac.state === 'suspended') ac.resume().catch(() => {}); return; }
+    try {
+      ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = soundOn ? .9 : 0; master.connect(ac.destination);
+      const len = Math.floor(ac.sampleRate * 1.9), ir = ac.createBuffer(2, len, ac.sampleRate);
+      for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8); }
+      conv = ac.createConvolver(); conv.buffer = ir; const wet = ac.createGain(); wet.gain.value = .5; conv.connect(wet).connect(master);
+      noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+      const loop = (type, f, g) => { const s = ac.createBufferSource(), fl = ac.createBiquadFilter(), gn = ac.createGain(); s.buffer = noiseBuf; s.loop = true; fl.type = type; fl.frequency.value = f; gn.gain.value = g; s.connect(fl).connect(gn).connect(master); s.start(); };
+      loop('highpass', 2200, .035); loop('bandpass', 700, .05); loop('lowpass', 180, .1);
+      humGain = ac.createGain(); humGain.gain.value = 0; const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 620; lp.connect(humGain).connect(master);
+      for (const f of [96, 143.5, 191]) { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(lp); o.start(); }
+    } catch (e) { ac = null; }
+  }
+  function out(node, send) { node.connect(master); if (send && conv) { const g = ac.createGain(); g.gain.value = send; node.connect(g).connect(conv); } }
+  function tone(f, d, type, vol, slide, send) {
+    if (!ac) return; const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(25, f * slide), t + d);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); o.connect(g); out(g, send); o.start(t); o.stop(t + d);
+  }
+  function noise(d, f0, f1, vol, type, send) {
+    if (!ac || !noiseBuf) return; const s = ac.createBufferSource(), fl = ac.createBiquadFilter(), g = ac.createGain(), t = ac.currentTime;
+    s.buffer = noiseBuf; fl.type = type || 'lowpass'; fl.frequency.setValueAtTime(f0, t); fl.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t + d);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d); s.connect(fl).connect(g); out(g, send); s.start(t, rnd(0, 1.2), d + .05);
+  }
+  const sfx = {
+    shot(i, v) {
+      if (i === 2) { noise(.1, 5000, 1200, .42 * v, 'highpass', .6); noise(.42, 1400, 120, .52 * v, 'lowpass', .9); tone(80, .2, 'sawtooth', .16 * v, .35, .4); }
+      else if (i === 3) { noise(.09, 7000, 2000, .46 * v, 'highpass', .8); noise(.75, 2200, 150, .52 * v, 'lowpass', 1); tone(100, .25, 'square', .14 * v, .3, .5); }
+      else if (i === 1) { noise(.05, 6500, 2200, .24 * v, 'highpass', .4); noise(.12, 2200, 400, .26 * v, 'lowpass', .6); tone(170, .06, 'square', .07 * v, .4, .2); }
+      else if (i === 4) { noise(.06, 5500, 1600, .3 * v, 'highpass', .5); noise(.16, 2000, 300, .3 * v, 'lowpass', .7); tone(140, .08, 'square', .09 * v, .4, .3); }
+      else { noise(.07, 6000, 1800, .32 * v, 'highpass', .5); noise(.2, 1800, 220, .34 * v, 'lowpass', .7); tone(120, .1, 'square', .1 * v, .35, .3); }
+    },
+    boom(big) { noise(big ? .9 : .5, 900, 60, big ? .6 : .4, 'lowpass', .9); tone(70, big ? .5 : .3, 'sine', .3, .4, .5); },
+    thunder() { noise(3.4, 320, 40, .5, 'lowpass', 1); noise(.5, 1800, 200, .2, 'lowpass', .8); }
+  };
+
+  /* ================= HUD ================= */
+  function show(id) { for (const o of ['menu', 'lobby', 'room', 'result', 'pause', 'over']) $(o).hidden = o !== id; $('hud').hidden = !(state === 'play' || state === 'pause'); }
+  let bannerTimer = 0;
+  function banner(txt, sub) { const b = $('banner'); b.textContent = txt; if (sub) { const s = document.createElement('small'); s.textContent = sub; b.append(s); } b.classList.add('on'); bannerTimer = 2.6; }
+  const cache = {}; const setTxt = (id, v) => { if (cache[id] !== v) { cache[id] = v; $(id).textContent = v; } };
+  function updateHud() {
+    if (mode === 'pvp') {
+      setTxt('objLabel', room ? room.name : 'Đấu nhiều người'); setTxt('scoreTxt', myK + ' hạ'); setTxt('leftTxt', myD + ' lần chết · ' + (remotes.size + 1) + ' người');
+      const left = matchEnd - performance.now(), sec = Math.ceil(left / 1000); setTxt('timer', mmss(left)); $('timer').classList.toggle('low', sec <= 10);
+      if (sec <= 10 && sec > 0 && sec !== lastBeep) { lastBeep = sec; tone(880, .08, 'square', .05); }
+    }
+    else { setTxt('objLabel', 'Đợt ' + wave); setTxt('scoreTxt', fmt(score)); const left = enemies.length + queue.length; setTxt('leftTxt', left ? 'Còn ' + left + ' mục tiêu' : 'Hẻm tạm yên'); }
+    setTxt('hpTxt', String(Math.ceil(P.hp))); $('hpBar').style.transform = `scaleX(${clamp(P.hp / 100, 0, 1)})`; $('hpBox').classList.toggle('low', P.hp < 35);
+    setTxt('gunTxt', reloadT > 0 ? 'Đang nạp đạn' : GUN.name); setTxt('ammoTxt', String(GUN.ammo)); setTxt('magTxt', ' / ' + GUN.mag); $('ammoBox').classList.toggle('low', GUN.ammo <= GUN.mag * .25);
+    $('hitmark').style.opacity = hitT > 0 ? 1 : 0; $('hurt').style.opacity = clamp(hurtT * 1.5 + (P.hp < 35 ? (35 - P.hp) / 60 : 0), 0, 1);
+    const cr = $('cross'); cr.style.opacity = adsK > .5 ? 0 : 1; cr.style.setProperty('--gap', (2 + (bloomS + GUN.hip) * 400 + Math.hypot(P.vel.x, P.vel.z) * 1.2) + 'px');
+    const dm = $('dmg'); dm.style.opacity = clamp(dmgT * 1.4, 0, 1); if (dmgT > 0) dm.style.transform = `rotate(${dmgAng}rad)`;
+  }
+
+  /* ================= vòng chơi ================= */
+  function clearWorld() { for (const e of enemies) scene.remove(e.g); for (const b of bolts) scene.remove(b.m); enemies = []; bolts = []; }
+  function spawn(type, decor) {
+    const t = TYPES[type], d = makeDrone(type);
+    const e = { type, t, g: d.g, rotors: d.rotors, aim: d.aim, pos: d.g.position, vel: new T.Vector3(), r: t.r, hp: t.hp * (1 + (wave - 1) * .08), fire: rnd(1.4, 2.8), burst: 0, burstT: 0, side: Math.random() < .5 ? -1 : 1, seed: rnd(0, TAU), pop: 0, decor };
+    if (Math.random() < .3) e.pos.set(rnd(5.5, 13.5), rnd(15, 19), rnd(-3.5, 3.5)); else e.pos.set(rnd(-3, 3), rnd(15, 19), rnd(-22, 22));
+    scene.add(e.g); enemies.push(e); return e;
+  }
+  function startWave(n) {
+    wave = n; queue = [];
+    const count = Math.min(22, 2 + n * 2), heavies = n >= 3 ? Math.min(3, Math.floor(n / 3)) : 0;
+    for (let i = 0; i < count - heavies; i++) queue.push(n >= 2 && Math.random() < Math.min(.4, .12 + n * .04) ? 'rammer' : 'scout');
+    for (let i = 0; i < heavies; i++) queue.splice(Math.random() * queue.length | 0, 0, 'heavy');
+    spawnT = 1.4; banner('Đợt ' + n, queue.length + ' máy bay đang vào hẻm'); tone(196, .5, 'sawtooth', .05, 1.5, .8); tone(98, .7, 'sine', .12, 1, .6);
+  }
+  function start(m, noLock) {
+    mode = m === 'pvp' ? 'pvp' : 'solo'; dead = false; ghost = false;
+    touchMode = lastPT === 'touch' || lastPT === 'pen'; stage.classList.toggle('touch', touchMode); $('touchUi').hidden = !touchMode;
+    initAudio(); clearWorld();
+    P.pos.set(0, 0, 18); P.vel.set(0, 0, 0); P.vy = 0; P.yaw = 0; P.pitch = 0; P.hp = 100; P.recoil = P.recoilYaw = 0; P.since = 9;
+    for (const w of WEAPONS) w.ammo = w.mag; equip(0); cd = 0; reloadT = 0; firing = false; ads = false; $('adsBtn').setAttribute('aria-pressed', 'false');
+    score = 0; kills = 0; interT = 0; hurtT = 0; dmgT = 0; keys.clear(); joyX = joyY = 0;
+    vm.visible = true; state = 'play'; show(null);
+    $('board').hidden = mode !== 'pvp'; $('timer').hidden = mode !== 'pvp'; $('restartBtn').hidden = mode === 'pvp'; $('resumeBtn').textContent = 'Chơi tiếp';
+    if (mode === 'pvp') enterPvp(); else startWave(1);
+    if (!touchMode && !noLock) lock();
+  }
+  function lock() { if (dragLook) return; try { const p = view.requestPointerLock(); if (p && p.catch) p.catch(lockFailed); } catch (e) { lockFailed(); } view.focus(); }
+  function lockFailed() {
+    if (lockWorked) { if (state === 'play') pause('Chưa khóa được chuột. Bấm Chơi tiếp lần nữa.'); return; }
+    dragLook = true; if (state === 'play') banner('Giữ chuột trái và kéo', 'để ngắm và bắn');
+  }
+  document.addEventListener('pointerlockchange', () => { locked = document.pointerLockElement === view; if (locked) { lockWorked = true; lockAt = performance.now(); } else { firing = false; ads = false; if (state === 'play' && !touchMode && !dragLook) pause(); } });
+  document.addEventListener('pointerlockerror', lockFailed);
+  function pause(note) {
+    if (state !== 'play') return; state = 'pause'; firing = false; keys.clear();
+    $('pauseNote').textContent = note || (mode === 'pvp' ? 'Trận vẫn chạy, đứng yên vẫn bị bắn.' : touchMode || dragLook ? 'Ván chơi đang dừng.' : 'Bấm Chơi tiếp để khóa chuột lại.'); $('lobbyBtn').textContent = mode === 'pvp' ? 'Rời phòng' : 'Về sảnh'; show('pause');
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+  function resume() { if (state !== 'pause') return; state = 'play'; show(null); initAudio(); $('resumeBtn').textContent = 'Chơi tiếp'; if (ghost) { ghost = false; respawnT = 0; } if (!touchMode) lock(); }
+  function gameOver() {
+    state = 'over'; firing = false; vm.visible = false; if (document.pointerLockElement) document.exitPointerLock();
+    const isBest = score > best; if (isBest) { best = Math.floor(score); try { localStorage.setItem('hm-best', String(best)); } catch (e) {} }
+    $('oScore').textContent = fmt(score); $('oWave').textContent = wave; $('oKills').textContent = fmt(kills);
+    $('oBest').textContent = isBest ? 'Kỷ lục mới!' : 'Kỷ lục: ' + fmt(best) + ' điểm'; sfx.boom(true); show('over');
+  }
+  function hurt(d, from) {
+    if (state !== 'play') return; P.hp -= d; P.since = 0; hurtT = .5; tone(110, .22, 'sawtooth', .12, .5, .3); noise(.12, 900, 200, .2);
+    if (from) { dmgT = 1; dmgAng = Math.atan2(from.x - P.pos.x, -(from.z - P.pos.z)) + P.yaw; }
+    if (P.hp <= 0) { P.hp = 0; updateHud(); gameOver(); }
+  }
+  const ray = new T.Raycaster(), fwd = new T.Vector3(), right = new T.Vector3(), upv = new T.Vector3(), nrm = new T.Vector3();
+  function reload() { if (reloadT > 0 || switchT > 0 || GUN.ammo === GUN.mag || state !== 'play' || dead) return; reloadT = GUN.reload; ads = false; $('adsBtn').setAttribute('aria-pressed', 'false'); tone(260, .05, 'square', .05); noise(.06, 3000, 800, .12); setTimeout(() => { noise(.05, 2500, 900, .14); tone(180, .05, 'square', .05); }, 900); }
+  function explode(pos, big) {
+    puff(pos.x, pos.y, pos.z, big ? 60 : 30, C_FIRE, big ? 10 : 7, 1.5, .6); puff(pos.x, pos.y, pos.z, big ? 26 : 14, C_EMBER, big ? 6 : 4, 3, 1.4, 5);
+    for (let i = 0; i < (big ? 6 : 3); i++) smoke(pos.x + rnd(-.4, .4), pos.y + rnd(-.2, .4), pos.z + rnd(-.4, .4), big ? 2.2 : 1.3, rnd(1.2, 2.2), .3);
+    fxLight.position.copy(pos); fxT = .22; sfx.boom(big);
+  }
+  function killEnemy(e, silent) {
+    const i = enemies.indexOf(e); if (i < 0) return; enemies.splice(i, 1); scene.remove(e.g); explode(e.pos, e.type === 'heavy');
+    if (!silent) { kills++; score += e.t.pts; }
+  }
+  function equip(i) { GUN.g.visible = false; cur = i; GUN = WEAPONS[i]; GUN.g.visible = true; reloadT = 0; cycT = 0; flash.position.set(0, GUN.my, GUN.mz - .02); renderWbar(); }
+  function setWeapon(i) {
+    if (i === cur || i < 0 || i >= WEAPONS.length || state !== 'play' || dead) return;
+    lastW = cur; equip(i); ads = false; $('adsBtn').setAttribute('aria-pressed', 'false'); switchT = .28; cd = Math.max(cd, .3); noise(.05, 2500, 900, .1); tone(320, .04, 'square', .04);
+  }
+  function renderWbar() {
+    const b = $('wbar'); if (!b.children.length) WEAPONS.forEach((w, i) => { const s = document.createElement('span'), n = document.createElement('b'); n.textContent = i + 1; s.append(n, w.name); b.append(s); });
+    [...b.children].forEach((c, i) => c.classList.toggle('on', i === cur));
+  }
+  function shoot() {
+    const w = GUN;
+    if (reloadT > 0 || cd > 0 || switchT > 0) return;
+    if (w.ammo <= 0) { if (!fired) tone(900, .03, 'square', .04); fired = true; reload(); return; }
+    w.ammo--; cd = 1 / w.rate; fired = true; cycT = cycMax = w.cyc ? Math.min(.75, .85 / w.rate) : 0;
+    camera.getWorldDirection(fwd); right.crossVectors(fwd, UP).normalize(); upv.crossVectors(right, fwd);
+    const o = camera.position;
+    if (touchMode) {
+      let bestA = .08, tx = 0, ty = 0, tz = 0, got = false;
+      for (const e of enemies) { v1.copy(e.pos).sub(o); const d = v1.length(), a = Math.acos(clamp(v1.dot(fwd) / d, -1, 1)); if (a < bestA) { bestA = a; tx = e.pos.x; ty = e.pos.y; tz = e.pos.z; got = true; } }
+      if (mode === 'pvp') for (const r of remotes.values()) { if (!r.alive) continue; v1.set(r.g.position.x, r.g.position.y + 1.1, r.g.position.z).sub(o); const d = v1.length(), a = Math.acos(clamp(v1.dot(fwd) / d, -1, 1)); if (a < bestA) { bestA = a; tx = r.g.position.x; ty = r.g.position.y + 1.1; tz = r.g.position.z; got = true; } }
+      if (got) { fwd.set(tx, ty, tz).sub(o).normalize(); right.crossVectors(fwd, UP).normalize(); upv.crossVectors(right, fwd); }
+    }
+    gun.updateMatrixWorld(true); v5.set(0, w.my, w.mz); gun.localToWorld(v5);
+    const spread = lerp(w.hip, w.adsS, adsK) + bloomS + Math.hypot(P.vel.x, P.vel.z) * .0012 * (1 - adsK) + (P.ground ? 0 : .02);
+    let anyHit = false, head = false; acc.clear();
+    for (let p = 0; p < w.pellets; p++) {
+      const a = rnd(0, TAU), s = Math.sqrt(Math.random()) * spread;
+      v1.copy(fwd).addScaledVector(right, Math.cos(a) * s).addScaledVector(upv, Math.sin(a) * s).normalize();
+      ray.set(o, v1); ray.far = 150; const hits = ray.intersectObjects(statics, false);
+      let dist = hits.length ? hits[0].distance : 150, target = null, rt = null, mult = 1;
+      for (const e of enemies) { v2.copy(e.pos).sub(o); const tca = v2.dot(v1); if (tca < 0) continue; const rr = e.r * 1.1, d2 = v2.lengthSq() - tca * tca; if (d2 > rr * rr) continue; const t = tca - Math.sqrt(rr * rr - d2); if (t < dist) { dist = t; target = e; } }
+      if (mode === 'pvp') for (const r of remotes.values()) {
+        if (!r.alive) continue;
+        for (const pt of PARTS) {
+          v2.set(r.g.position.x, r.g.position.y + pt[0], r.g.position.z).sub(o); const tca = v2.dot(v1); if (tca < 0) continue;
+          const d2 = v2.lengthSq() - tca * tca; if (d2 > pt[1] * pt[1]) continue;
+          const t = tca - Math.sqrt(pt[1] * pt[1] - d2); if (t < dist) { dist = t; rt = r; mult = pt[2]; target = null; }
+        }
+      }
+      v2.copy(o).addScaledVector(v1, dist);
+      const fall = lerp(1, w.fmin, smooth(w.f0, w.f1, dist));
+      if (rt) { anyHit = true; if (mult > 1) head = true; acc.set(rt.id, (acc.get(rt.id) || 0) + w.dmg * PVP_DMG * mult * fall); puff(v2.x, v2.y, v2.z, 6, C_EMBER, 3.5, .5, .35); }
+      else if (target) { if (target.hp > 0) { target.hp -= w.dmg * fall; target.pop = 1; if (target.hp <= 0) killEnemy(target); } anyHit = true; puff(v2.x, v2.y, v2.z, 6, C_SPARK, 5, 0, .35); }
+      else if (hits.length) {
+        const h = hits[0];
+        if (h.object === floor) puff(v2.x, .05, v2.z, 7, C_WATER, 2.6, 2.4, .45);
+        else {
+          nrm.copy(h.face.normal).transformDirection(h.object.matrixWorld);
+          puff(v2.x, v2.y, v2.z, 4, C_SPARK, 4, .5, .3); puff(v2.x, v2.y, v2.z, 4, C_DUST, 1.6, .6, .7, 3); if (p % 3 === 0 && Math.random() < .5) smoke(v2.x + nrm.x * .1, v2.y, v2.z + nrm.z * .1, .35, .8, .32);
+          const dc = decals[di++ % decals.length]; dc.position.copy(v2).addScaledVector(nrm, .006); v3.copy(dc.position).add(nrm); dc.lookAt(v3); dc.rotateZ(rnd(0, TAU)); dc.scale.setScalar(rnd(.7, 1.3) * (w.dmg > 50 ? 1.6 : 1)); dc.visible = true;
+        }
+      }
+      if (p % 3 === 0) tracer(v5, v2);
+    }
+    for (const [id, d] of acc) net({ t: 'hit', to: id, d: Math.round(d) });
+    if (mode === 'pvp' && time - shotEmitT > .12) { shotEmitT = time; net({ t: 'shot', w: cur, e: [r2(v2.x), r2(v2.y), r2(v2.z)] }); }
+    if (anyHit) { hitT = .09; tone(head ? 1900 : 1500, .03, 'square', .035); }
+    flashLight.position.copy(v5); flashT = .05; flash.rotation.z = rnd(0, TAU); flash.scale.setScalar(rnd(.7, 1.25) * w.fl);
+    v4.set(w.ej[0], w.ej[1], w.ej[2]); gun.localToWorld(v4); const c = cases[ci++ % CASE]; c.p.copy(v4); c.v.copy(right).multiplyScalar(rnd(1.6, 2.6)).addScaledVector(upv, rnd(1.2, 2)).addScaledVector(fwd, rnd(-.6, .2)).add(P.vel); c.w.set(rnd(-20, 20), rnd(-20, 20), rnd(-20, 20)); c.life = 3.5;
+    P.recoil += w.kick * lerp(1, .65, adsK); P.recoilYaw += rnd(-1, 1) * w.kick * .35; vmKick = w.vk; bloomS = Math.min(.03, bloomS + w.bloom); sfx.shot(cur, 1);
+  }
+  function updatePlayer(dt) {
+    let f = 0, s = 0;
+    if (keys.has('KeyW') || keys.has('ArrowUp')) f++; if (keys.has('KeyS') || keys.has('ArrowDown')) f--; if (keys.has('KeyD') || keys.has('ArrowRight')) s++; if (keys.has('KeyA') || keys.has('ArrowLeft')) s--;
+    if (touchMode) { s = joyX; f = -joyY; }
+    const l = Math.hypot(f, s); if (l > 1) { f /= l; s /= l; }
+    const sprint = (keys.has('ShiftLeft') || keys.has('ShiftRight') || (touchMode && l > .95)) && f > .3 && !ads && reloadT <= 0;
+    const sp = sprint ? 7.6 : ads ? 3.2 : 5.2, sn = Math.sin(P.yaw), cs = Math.cos(P.yaw);
+    const k = Math.min(1, dt * (P.ground ? 11 : 2.5));
+    P.vel.x += ((-sn * f + cs * s) * sp - P.vel.x) * k; P.vel.z += ((-cs * f - sn * s) * sp - P.vel.z) * k;
+    if ((keys.has('Space') || wantJump) && P.ground) { P.vy = 6.2; P.ground = false; } wantJump = false;
+    P.vy -= 18 * dt; P.pos.y += P.vy * dt;
+    if (P.pos.y <= 0) { if (!P.ground) { P.land = Math.min(1, -P.vy / 9); noise(.1, 1400, 300, .16); } P.pos.y = 0; P.vy = 0; P.ground = true; }
+    P.pos.x += P.vel.x * dt; P.pos.z += P.vel.z * dt; resolve(P.pos, .42);
+    const moving = Math.hypot(P.vel.x, P.vel.z);
+    if (P.ground) { P.bob += moving * dt * 1.55; stepT -= moving * dt; if (stepT <= 0 && moving > 1.5) { stepT = 2.3; noise(.09, 2600, 500, .07 + moving * .008, 'bandpass'); } }
+    P.land = Math.max(0, P.land - dt * 5); P.since += dt; if (P.since > 5 && P.hp < 100) P.hp = Math.min(100, P.hp + 12 * dt);
+    P.recoil = Math.max(0, P.recoil - dt * (.06 + P.recoil * 7)); P.recoilYaw *= Math.max(0, 1 - dt * 7); bloomS = Math.max(0, bloomS - dt * .035);
+    const bobK = reduced ? 0 : Math.min(1, moving / 5) * (1 - adsK * .8);
+    camera.position.set(P.pos.x, P.pos.y + 1.66 + Math.sin(P.bob * 2) * .028 * bobK - P.land * .09, P.pos.z);
+    camera.rotation.set(clamp(P.pitch + P.recoil, -1.5, 1.5), P.yaw + P.recoilYaw, reduced ? 0 : Math.cos(P.bob) * .004 * bobK);
+    cd -= dt; if (reloadT > 0) { reloadT -= dt; if (reloadT <= 0) { GUN.ammo = GUN.mag; noise(.05, 3500, 1200, .16); tone(420, .04, 'square', .05); } }
+    if (!firing) fired = false; else if (!sprint && (GUN.auto || !fired || touchMode)) shoot();
+    adsK += ((ads && reloadT <= 0 ? 1 : 0) - adsK) * Math.min(1, dt * 13); sprintK += ((sprint ? 1 : 0) - sprintK) * Math.min(1, dt * 9);
+    const fov = lerp(baseFov, baseFov * GUN.adsFov, adsK); if (Math.abs(camera.fov - fov) > .01) { camera.fov = fov; camera.updateProjectionMatrix(); }
+    // tay súng
+    vmKick = Math.max(0, vmKick - dt * 11); switchT = Math.max(0, switchT - dt); cycT = Math.max(0, cycT - dt); const w = GUN, sw = switchT / .28; swayX += (0 - swayX) * Math.min(1, dt * 7); swayY += (0 - swayY) * Math.min(1, dt * 7);
+    const rl = reloadT > 0 ? 1 - reloadT / GUN.reload : -1, tilt = rl < 0 ? 0 : smooth(0, .15, rl) * (1 - smooth(.82, 1, rl)), magOut = rl < 0 ? 0 : smooth(.15, .32, rl) * (1 - smooth(.5, .68, rl));
+    const hx = lerp(w.hipP[0], w.adsP[0], adsK), hy = lerp(w.hipP[1], w.adsP[1], adsK), hz = lerp(w.hipP[2], w.adsP[2], adsK), bk = bobK * (1 - adsK);
+    vm.position.set((hx + Math.cos(P.bob) * .01 * bk + swayX * .5 + sprintK * .06) * GS, (hy + Math.abs(Math.sin(P.bob)) * .012 * bk - swayY * .4 - sprintK * .07 - tilt * .05 - P.land * .03 - sw * .22) * GS, (hz + vmKick * lerp(.035, .018, adsK)) * GS);
+    vm.rotation.set(vmKick * lerp(.05, .018, adsK) - swayY * 1.2 - sprintK * .35 + tilt * .35 - sw * .7, .035 * (1 - adsK) + swayX * 1.6 + sprintK * .7, tilt * -.55 + swayX * 1.2);
+    if (w.magG) w.magG.position.y = w.magY - magOut * .3;
+    w.lh.position.set(w.lhB.x + magOut * .04, w.lhB.y - magOut * .28 - tilt * .02, w.lhB.z + magOut * .24);
+    const cy = cycMax > 0 && cycT > 0 ? Math.sin((1 - cycT / cycMax) * PI) : 0;
+    if (w.pump) w.pump.position.z = cy * .09; if (w.bolt) { w.bolt.position.z = .08 + cy * .07; w.bolt.rotation.z = Math.min(1, cy * 2) * .9; } if (w.slide) w.slide.position.z = Math.min(1, vmKick) * .035;
+    const sc = w.scope ? smooth(.7, .95, adsK) : 0; $('scope').style.opacity = sc; w.g.visible = sc < .9;
+    if (w.dot) w.dot.visible = adsK > .4;
+    flashT -= dt; flash.visible = flashT > 0 && w.g.visible; flashLight.intensity = flashT > 0 ? 5 : 0;
+  }
+  function fireBolt(e) {
+    const t = e.t, m = new T.Mesh(boltG, boltMat); e.aim.getWorldPosition(m.position);
+    const d = m.position.distanceTo(camera.position), lead = d / t.bolt * .5;
+    v1.set(P.pos.x + P.vel.x * lead + rnd(-.8, .8), P.pos.y + 1.25 + rnd(-.4, .4), P.pos.z + P.vel.z * lead + rnd(-.8, .8)).sub(m.position).normalize();
+    v2.copy(m.position).add(v1); m.lookAt(v2); scene.add(m); bolts.push({ m, vel: v1.clone().multiplyScalar(t.bolt), dmg: t.dmg, life: 5, from: e.pos.clone() });
+    const vol = clamp(1 - d / 40, .1, 1); tone(880, .14, 'sawtooth', .05 * vol, .35, .5); noise(.08, 3000, 800, .1 * vol, 'bandpass', .4);
+  }
+  function animDrone(e, dt, face) {
+    e.g.rotation.y = face; e.g.rotation.x = clamp(Math.hypot(e.vel.x, e.vel.z) * .035, 0, .32);
+    for (const r of e.rotors) r.rotation.z += dt * 50;
+    e.pop = Math.max(0, e.pop - dt * 8); const base = e.t.sc || 1, pulse = e.type === 'rammer' ? 1 + Math.sin(time * 16 + e.seed) * .07 : 1; e.g.scale.setScalar(base * pulse * (1 + e.pop * .14));
+    if (e.aim) e.aim.lookAt(camera.position.x, camera.position.y - .3, camera.position.z);
+  }
+  function updateEnemies(dt) {
+    let near = 99;
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i], t = e.t, dx = P.pos.x - e.pos.x, dz = P.pos.z - e.pos.z, dh = Math.hypot(dx, dz) || .001, nx = dx / dh, nz = dz / dh;
+      near = Math.min(near, e.pos.distanceTo(camera.position));
+      if (e.type === 'rammer') {
+        v1.set(dx, P.pos.y + 1.2 - e.pos.y, dz); const d3 = v1.length(); if (dh > 9) v1.y = 3.4 - e.pos.y;
+        v1.normalize().multiplyScalar(e.pos.y > 11 ? 5 : t.speed); if (e.pos.y > 11) v1.y = -6;
+        e.vel.lerp(v1, Math.min(1, dt * 2.4));
+        if (d3 < 1.3) { const from = e.pos.clone(); killEnemy(e, true); hurt(t.boom, from); continue; }
+      } else {
+        const radial = clamp((dh - t.keep) * .6, -1, 1), fly = t.fly + Math.sin(time * 1.2 + e.seed) * .6;
+        v1.set((nx * radial - nz * e.side * .45) * t.speed, clamp((fly - e.pos.y) * 1.6, -5, 3), (nz * radial + nx * e.side * .45) * t.speed);
+        e.vel.lerp(v1, Math.min(1, dt * 1.8)); e.fire -= dt;
+        if (e.burst > 0) { e.burstT -= dt; if (e.burstT <= 0) { e.burst--; e.burstT = .17; fireBolt(e); } }
+        else if (e.fire <= 0 && e.pos.y < 9) {
+          e.fire = rnd(t.cd[0], t.cd[1]) * Math.max(.6, 1 - wave * .02);
+          const d = e.pos.distanceTo(camera.position);
+          if (d < 44) { v2.copy(camera.position).sub(e.pos).normalize(); ray.set(e.pos, v2); ray.far = d; if (!ray.intersectObjects(statics, false).length) { if (e.type === 'heavy') { e.burst = 3; e.burstT = 0; } else fireBolt(e); } else { e.side = -e.side; e.fire = .7; } }
+        }
+      }
+      e.pos.addScaledVector(e.vel, dt); clampAir(e.pos, e.r + .35); if (e.pos.y < .9) e.pos.y = .9;
+      for (let j = i - 1; j >= 0; j--) { const o = enemies[j], sx = o.pos.x - e.pos.x, sy = o.pos.y - e.pos.y, sz = o.pos.z - e.pos.z, min = e.r + o.r + .25, d2 = sx * sx + sy * sy + sz * sz; if (d2 < min * min && d2 > 1e-4) { const d = Math.sqrt(d2), k = (min - d) / d * .5; e.pos.x -= sx * k; e.pos.y -= sy * k; e.pos.z -= sz * k; o.pos.x += sx * k; o.pos.y += sy * k; o.pos.z += sz * k; } }
+      animDrone(e, dt, Math.atan2(dx, dz));
+    }
+    if (humGain) humGain.gain.setTargetAtTime(enemies.length ? clamp(.09 * (1 - near / 34), .008, .09) : 0, ac.currentTime, .2);
+  }
+  function updateBolts(dt) {
+    for (let i = bolts.length - 1; i >= 0; i--) {
+      const b = bolts[i], p = b.m.position; p.addScaledVector(b.vel, dt); b.life -= dt;
+      const dx = p.x - P.pos.x, dz = p.z - P.pos.z, py = clamp(p.y, P.pos.y + .2, P.pos.y + 1.7), dy = p.y - py; let gone = b.life <= 0;
+      if (dx * dx + dz * dz + dy * dy < .28) { hurt(b.dmg, b.from); gone = true; puff(p.x, p.y, p.z, 10, C_FIRE, 3, 0, .3); }
+      else if (insideSolid(p.x, p.y, p.z)) { gone = true; puff(p.x, p.y, p.z, 10, C_SPARK, 4, 1, .4); if (p.y < .1) puff(p.x, .05, p.z, 8, C_WATER, 2.5, 2.5, .4); noise(.08, 2400, 500, clamp(.2 - p.distanceTo(camera.position) * .006, 0, .2), 'bandpass', .4); }
+      if (gone) { scene.remove(b.m); bolts.splice(i, 1); }
+    }
+  }
+  function updateWave(dt) {
+    if (queue.length) { spawnT -= dt; if (spawnT <= 0 && enemies.length < Math.min(14, 2 + wave * 2)) { spawn(queue.pop()); spawnT = Math.max(.45, 1 - wave * .04); } }
+    else if (!enemies.length) {
+      if (interT <= 0) { interT = 4; score += wave * 100; banner('Xong đợt ' + wave, 'Thưởng ' + fmt(wave * 100) + ' điểm'); tone(392, .4, 'sine', .08, 1, .8); tone(588, .6, 'sine', .06, 1, .8); }
+      else { interT -= dt; if (interT <= 0) startWave(wave + 1); }
+    }
+  }
+  let boltT = rnd(6, 14), boltK = 0, tvT = 0;
+  const eul = new T.Euler(), quat = new T.Quaternion(), one = new T.Vector3(1, 1, 1);
+  function updateFx(dt) {
+    for (let i = 0; i < PN; i++) {
+      if (pLife[i] <= 0) continue; pLife[i] -= dt; const k = i * 3;
+      if (pLife[i] <= 0) { pPos[k + 1] = -999; continue; }
+      pVel[k + 1] -= pGrav[i] * dt; pPos[k] += pVel[k] * dt; pPos[k + 1] += pVel[k + 1] * dt; pPos[k + 2] += pVel[k + 2] * dt;
+      if (pPos[k + 1] < .02) { pPos[k + 1] = .02; pVel[k + 1] *= -.3; pVel[k] *= .5; pVel[k + 2] *= .5; }
+      const f = pLife[i] / pMax[i]; pCol[k] = pBase[k] * f; pCol[k + 1] = pBase[k + 1] * f; pCol[k + 2] = pBase[k + 2] * f;
+    }
+    pGeo.attributes.position.needsUpdate = true; pGeo.attributes.color.needsUpdate = true;
+    for (const o of smokes) if (o.life > 0) { o.life -= dt; const f = o.life / o.max; o.s.material.opacity = Math.sin(f * PI) * .5; o.s.position.y += o.vy * dt; const s = o.s.scale.x + o.grow * dt; o.s.scale.set(s, s, 1); if (o.life <= 0) o.s.visible = false; }
+    for (const t of tracers) if (t.life > 0) { t.life -= dt; t.l.material.opacity = clamp(t.life / .06, 0, 1); if (t.life <= 0) t.l.visible = false; }
+    for (let i = 0; i < CASE; i++) {
+      const c = cases[i]; if (c.life <= 0) continue; c.life -= dt; c.v.y -= 9.8 * dt; c.p.addScaledVector(c.v, dt);
+      if (c.p.y < .012) { c.p.y = .012; if (Math.abs(c.v.y) > 1.2) tone(rnd(3800, 5200), .05, 'sine', .025); c.v.y *= -.35; c.v.x *= .55; c.v.z *= .55; c.w.multiplyScalar(.5); }
+      eul.set(c.r.x += c.w.x * dt, c.r.y += c.w.y * dt, c.r.z += c.w.z * dt); if (c.life <= 0) c.p.y = -99;
+      tmpM.compose(c.p, quat.setFromEuler(eul), one); caseI.setMatrixAt(i, tmpM);
+    }
+    caseI.instanceMatrix.needsUpdate = true;
+    fxT -= dt; fxLight.intensity = fxT > 0 ? 9 * (fxT / .22) : 0;
+    for (const n of neonLights) n.l.intensity = n.base * (.93 + Math.sin(time * 37 + n.ph) * .04 + (Math.sin(time * 2.3 + n.ph) > .985 ? -.6 : 0));
+    lamp1.intensity = 2.4 * (.97 + Math.sin(time * 50) * .02); tvT -= dt; if (tvT <= 0) { tvT = rnd(.08, .5); const v = rnd(.5, 1.4); M.win[2].color.setRGB(v, v, v * 1.1); }
+    // sấm chớp
+    boltT -= dt; if (boltT <= 0) { boltT = rnd(14, 30); boltK = 1; setTimeout(sfx.thunder, rnd(500, 1800)); }
+    if (boltK > 0) { boltK -= dt * 2.2; const fl = boltK > 0 ? (Math.sin(boltK * 40) > -.2 ? 1 : .25) * boltK : 0; bolt.intensity = fl * 2.2; skyMat.color.setScalar(.7 + fl * 14); hemi.intensity = .09 + fl * 1.2; rainMat.uniforms.uFlash.value = fl * .35; }
+    hitT -= dt; hurtT = Math.max(0, hurtT - dt); dmgT = Math.max(0, dmgT - dt * .9);
+    if (bannerTimer > 0) { bannerTimer -= dt; if (bannerTimer <= 0) $('banner').classList.remove('on'); }
+    rainMat.uniforms.uTime.value = time; rainMat.uniforms.uCam.value.copy(camera.position); FU.uTime.value = time; sky.position.set(camera.position.x, 0, camera.position.z);
+  }
+
+  /* ================= đấu mạng LAN ================= */
+  const AVG = { torso: cyg(.24, .3, .74, 12), leg: bxg(.17, .78, .2), head: new T.SphereGeometry(.15, 14, 10), hat: new T.ConeGeometry(.42, .22, 18), arm: cyg(.065, .055, .56, 8), gun: bxg(.06, .09, .7) };
+  const COATS = [0xd8b020, 0x2f6fd0, 0xc23a34, 0x2f9a5a, 0x8a4fd0, 0xd07a2a].map(c => std({ color: c, roughness: .36 }));
+  const SKIN = std({ color: 0xd9a882, roughness: .6 }), STRAW = std({ color: 0xe2c98a, roughness: .8, normalMap: TX.wood.normalMap }), PANTS = std({ color: 0x15171b, roughness: .8 });
+  function makeRemote(id) {
+    let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+    const g = new T.Group(), coat = COATS[h % COATS.length];
+    const pt = (geo, mat, x, y, z, rx, ry, rz) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx || 0, ry || 0, rz || 0); m.castShadow = true; m.receiveShadow = true; g.add(m); };
+    pt(AVG.leg, PANTS, -.11, .39, 0); pt(AVG.leg, PANTS, .11, .39, 0); pt(AVG.torso, coat, 0, 1.13, 0); pt(AVG.head, SKIN, 0, 1.6, 0); pt(AVG.hat, STRAW, 0, 1.8, 0);
+    pt(AVG.arm, coat, .25, 1.24, .22, PI / 2 - .25, 0, .12); pt(AVG.arm, coat, -.2, 1.22, .26, PI / 2 - .2, 0, -.55); pt(AVG.gun, GM2, .16, 1.26, .55);
+    const c = mkCanvas(256, 64), tex = new T.CanvasTexture(c), sp = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false }));
+    sp.scale.set(1.8, .45, 1); sp.position.y = 2.25; g.add(sp); g.visible = false; scene.add(g);
+    return { id, g, c, tex, nick: '', alive: false, k: 0, d: 0, tx: 0, ty: 0, tz: 0, tyaw: 0, yaw: 0 };
+  }
+  function setLabel(r) {
+    const x = r.c.getContext('2d'); x.clearRect(0, 0, 256, 64); x.font = '800 34px "Saira Condensed", system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.lineWidth = 6; x.strokeStyle = 'rgba(4,6,10,.9)'; x.strokeText(r.nick, 128, 34); x.fillStyle = '#eef2f6'; x.fillText(r.nick, 128, 34); r.tex.needsUpdate = true;
+  }
+  function dropRemote(id) { const r = remotes.get(id); if (r) { scene.remove(r.g); remotes.delete(id); } }
+  function clearRemotes() { for (const r of remotes.values()) scene.remove(r.g); remotes.clear(); }
+  function setRemote(id, s) {
+    if (typeof id !== 'string' || id === myId || !inMatch()) return;
+    if (!s || s.m !== 'pvp' || ![s.x, s.y, s.z, s.yw].every(Number.isFinite)) { dropRemote(id); return; }
+    let r = remotes.get(id);
+    if (!r) { r = makeRemote(id); remotes.set(id, r); r.g.position.set(s.x, clamp(s.y, 0, 6), s.z); r.yaw = s.yw; }
+    r.tx = clamp(s.x, -5, 16); r.ty = clamp(s.y, 0, 6); r.tz = clamp(s.z, -25, 25); r.tyaw = s.yw; r.alive = s.a === 1; r.k = s.k | 0; r.d = s.d | 0;
+    const n = String(s.n == null ? '' : s.n).slice(0, 12).trim() || 'Khách'; if (n !== r.nick) { r.nick = n; setLabel(r); }
+  }
+  function netNote() {
+    $('pvpBtn').disabled = !(ready && online);
+    $('netNote').textContent = location.protocol === 'file:' ? 'Muốn đấu mạng LAN: chạy "node server.js" rồi mở địa chỉ nó in ra, đừng mở thẳng file.'
+      : !online ? 'Đang nối máy chủ…'
+      : (rooms.length ? rooms.length + ' phòng đang mở.' : 'Đã nối máy chủ. Chưa có phòng nào.') + (lanAddr ? SHARE + lanAddr : '');
+  }
+  function sendState() { if (inMatch()) net({ t: 's', x: r2(P.pos.x), y: r2(P.pos.y), z: r2(P.pos.z), yw: r2(P.yaw), a: dead ? 0 : 1, k: myK, d: myD }); }
+  function respawn() {
+    let bestS = SPAWNS[0], bestD = -1;
+    for (const s of SPAWNS) { let d = 999; for (const r of remotes.values()) if (r.alive) d = Math.min(d, Math.hypot(r.g.position.x - s[0], r.g.position.z - s[1])); d += Math.random() * 5; if (d > bestD) { bestD = d; bestS = s; } }
+    P.pos.set(bestS[0], 0, bestS[1]); resolve(P.pos, .42); P.vel.set(0, 0, 0); P.vy = 0; P.pitch = 0; P.recoil = P.recoilYaw = 0; P.hp = 100; P.since = 9;
+    P.yaw = Math.abs(P.pos.z) > 6 ? (P.pos.z > 0 ? 0 : PI) : Math.atan2(P.pos.x, P.pos.z);
+    for (const w of WEAPONS) w.ammo = w.mag; reloadT = 0; dead = false; vm.visible = true; sendState();
+  }
+  function enterPvp() {
+    myK = 0; myD = 0; lastHurtBy = null; boardKey = ''; lastBeep = 0; if (humGain) humGain.gain.value = 0; respawn();
+    banner(room ? room.name : 'Vào sân', room ? 'Trận ' + room.dur + ' phút. Ai hạ nhiều nhất thắng' : '');
+  }
+  function pvpHurt(d, from) {
+    P.hp -= d; hurtT = .5; P.since = 0; tone(110, .22, 'sawtooth', .12, .5, .3); noise(.12, 900, 200, .2);
+    if (from) { dmgT = 1; dmgAng = Math.atan2(from.x - P.pos.x, -(from.z - P.pos.z)) + P.yaw; }
+    if (P.hp > 0) return;
+    P.hp = 0; dead = true; respawnT = 3; myD++; firing = false; ads = false; vm.visible = false; $('scope').style.opacity = 0;
+    const by = remotes.get(lastHurtBy); net({ t: 'kill', by: lastHurtBy });
+    banner('Bị ' + (by ? by.nick : 'đối thủ') + ' hạ', 'Hồi sinh sau 3 giây'); sfx.boom(false); sendState();
+  }
+  function onHit(m) {
+    const r = remotes.get(m.from); if (!inMatch() || dead || !r) return;
+    const dmg = clamp(+m.d || 0, 0, 200); if (!dmg) return; lastHurtBy = m.from; pvpHurt(dmg, r.g.position);
+  }
+  function onShot(m) {
+    const r = remotes.get(m.from), e = m.e; if (!inMatch() || !r || !Array.isArray(e) || e.length !== 3 || !e.every(Number.isFinite)) return;
+    v1.set(r.g.position.x, r.g.position.y + 1.25, r.g.position.z); v2.set(e[0], e[1], e[2]); tracer(v1, v2);
+    const vol = clamp(1 - v1.distanceTo(camera.position) / 55, 0, 1) * .75; if (vol > .02) sfx.shot(m.w | 0, vol);
+  }
+  function onKill(m) {
+    if (!inMatch()) return; const r = remotes.get(m.from);
+    if (r) { puff(r.g.position.x, r.g.position.y + 1, r.g.position.z, 24, C_EMBER, 4, 2, .8, 5); smoke(r.g.position.x, r.g.position.y + 1, r.g.position.z, 1.4, 1.4, .3); }
+    if (m.by === myId) { myK++; banner('Hạ ' + (r ? r.nick : 'đối thủ')); tone(660, .1, 'triangle', .08); setTimeout(() => tone(990, .16, 'triangle', .08), 90); }
+  }
+  function updateBoard() {
+    const rows = [{ n: nick + ' (mày)', k: myK, d: myD, me: 1 }]; for (const r of remotes.values()) rows.push({ n: r.nick, k: r.k, d: r.d });
+    rows.sort((a, b) => b.k - a.k || a.d - b.d); const key = JSON.stringify(rows); if (key === boardKey) return; boardKey = key;
+    const b = $('board'); b.textContent = '';
+    for (const r of rows.slice(0, 6)) { const li = document.createElement('li'), s = document.createElement('span'), v = document.createElement('b'); s.textContent = r.n; v.textContent = r.k + ' / ' + r.d; if (r.me) li.className = 'me'; li.append(s, v); b.append(li); }
+  }
+  function updatePvp(dt) {
+    if (dead && !ghost) { respawnT -= dt; if (respawnT <= 0) respawn(); }
+    const k = Math.min(1, dt * 14);
+    for (const r of remotes.values()) {
+      const p = r.g.position; p.x += (r.tx - p.x) * k; p.y += (r.ty - p.y) * k; p.z += (r.tz - p.z) * k;
+      let da = (r.tyaw - r.yaw) % TAU; if (da > PI) da -= TAU; else if (da < -PI) da += TAU; r.yaw += da * k; r.g.rotation.y = r.yaw + PI; r.g.visible = r.alive;
+    }
+    presT -= dt; if (presT <= 0) { presT = LAN ? .05 : .085; sendState(); }
+    boardT -= dt; if (boardT <= 0) { boardT = .5; updateBoard(); }
+  }
+  /* ---------- sảnh, phòng, kết quả ---------- */
+  function leaveMatchView() {
+    if (document.pointerLockElement) document.exitPointerLock();
+    mode = 'solo'; dead = false; ghost = false; firing = false; ads = false; vm.visible = false; clearRemotes(); $('scope').style.opacity = 0;
+  }
+  function toMenu(msg) {
+    leaveMatchView(); state = 'menu'; clearWorld(); decor(); show('menu'); netNote();
+    if (typeof msg === 'string') { $('menuNote').hidden = false; $('menuNote').textContent = msg; }
+  }
+  function renderRooms() {
+    const ul = $('roomList'); ul.textContent = '';
+    if (!rooms.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'Chưa có phòng nào. Tạo phòng đầu tiên ở bên dưới.'; ul.append(li); return; }
+    for (const r of rooms) {
+      const li = document.createElement('li'), box = document.createElement('div'), nm = document.createElement('b'), meta = document.createElement('span'), bt = document.createElement('button');
+      nm.textContent = r.name; meta.textContent = r.n + '/' + r.max + ' người · ' + r.dur + ' phút · ' + (r.state === 'play' ? 'đang đấu, còn ' + mmss(r.left) : 'đang chờ');
+      bt.className = 'btn alt'; bt.type = 'button'; bt.textContent = 'Vào'; bt.disabled = r.n >= r.max; bt.setAttribute('aria-label', 'Vào phòng ' + r.name);
+      bt.addEventListener('click', () => { gestureAt = performance.now(); net({ t: 'join', code: r.code, n: nick }); });
+      box.append(nm, meta); li.append(box, bt); ul.append(li);
+    }
+  }
+  function renderRoom() {
+    if (!room) return;
+    $('roomName').textContent = room.name; $('roomMeta').textContent = 'Mã ' + room.code + ' · ' + room.dur + ' phút · tối đa ' + room.max + ' người';
+    const ul = $('playerList'); ul.textContent = '';
+    for (const p of room.players) {
+      const li = document.createElement('li'), nm = document.createElement('b'), tag = document.createElement('span');
+      nm.textContent = p.n; tag.textContent = [p.id === room.host ? 'chủ phòng' : '', p.id === myId ? 'mày' : ''].filter(Boolean).join(' · '); if (p.id === myId) li.className = 'me'; li.append(nm, tag); ul.append(li);
+    }
+    const host = room.host === myId; $('roomStart').hidden = !host; $('roomWait').hidden = host;
+  }
+  function openLobby() {
+    readNick(); state = 'lobby'; show('lobby'); $('lobbyNote').hidden = true; $('lobbyAddr').textContent = lanAddr ? SHARE.trim() + ' ' + lanAddr : 'Mọi người mở chung địa chỉ này để thấy phòng.';
+    $('roomNameIn').placeholder = 'Phòng của ' + nick; net({ t: 'hello', n: nick }); net({ t: 'rooms' }); renderRooms();
+  }
+  function startMatch() {
+    clearRemotes(); const viaGesture = performance.now() - gestureAt < 4000; gestureAt = -1e9;
+    start('pvp', !viaGesture);
+    if (!viaGesture && !touchMode) { ghost = true; dead = true; vm.visible = false; state = 'pause'; $('pauseNote').textContent = 'Trận bắt đầu rồi. Bấm Vào trận để nhập cuộc.'; $('resumeBtn').textContent = 'Vào trận'; $('lobbyBtn').textContent = 'Rời phòng'; show('pause'); sendState(); }
+  }
+  function onRoom(r) {
+    if (!r || typeof r !== 'object' || !Array.isArray(r.players)) return;
+    room = { code: String(r.code), name: String(r.name).slice(0, 20), host: r.host, dur: +r.dur || 5, max: r.max | 0, state: r.state, players: r.players.slice(0, 16).map(p => ({ id: String(p.id), n: String(p.n).slice(0, 12) || 'Khách' })) };
+    if (r.state === 'play') matchEnd = performance.now() + (+r.left || 0);
+    if (state === 'lobby') { state = 'room'; show('room'); }
+    if (state === 'room' || state === 'result') renderRoom();
+    if (r.state === 'play' && !inMatch() && (state === 'room' || state === 'result')) startMatch();
+  }
+  function onEnd(board) {
+    if (!inMatch()) return;
+    leaveMatchView(); state = 'result'; clearWorld(); decor();
+    const rows = Array.isArray(board) ? board.slice(0, 16) : [], ol = $('resList'); ol.textContent = '';
+    const top = rows[0], tie = rows[1] && top && rows[1].k === top.k && rows[1].d === top.d;
+    $('resTitle').textContent = !top ? 'Hết giờ' : tie ? 'Hết giờ, hòa' : top.id === myId ? 'Mày thắng' : String(top.n).slice(0, 12) + ' thắng';
+    rows.forEach((r, i) => {
+      const li = document.createElement('li'), rk = document.createElement('i'), box = document.createElement('div'), nm = document.createElement('b'), sc = document.createElement('span');
+      rk.textContent = i + 1; nm.textContent = String(r.n).slice(0, 12) + (r.id === myId ? ' (mày)' : ''); sc.textContent = (r.k | 0) + ' hạ · ' + (r.d | 0) + ' lần chết'; if (r.id === myId) li.className = 'me';
+      box.append(nm); li.append(rk, box, sc); li.style.justifyContent = 'flex-start'; sc.style.marginLeft = 'auto'; ol.append(li);
+    });
+    show('result'); tone(523, .25, 'triangle', .08, 1, .6); setTimeout(() => tone(784, .4, 'triangle', .08, 1, .6), 200);
+  }
+  function leaveRoom() { net({ t: 'leave' }); room = null; if (inMatch()) { leaveMatchView(); clearWorld(); decor(); } openLobby(); }
+  function connect() {
+    if (location.protocol === 'file:') { netNote(); return; }
+    try { ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws'); } catch (e) { ws = null; setTimeout(connect, 3000); return; }
+    ws.onopen = () => { online = true; netNote(); };
+    ws.onclose = () => {
+      const was = inMatch() || state === 'lobby' || state === 'room' || state === 'result';
+      online = false; myId = null; room = null; rooms = [];
+      if (was) toMenu('Mất kết nối máy chủ. Đang nối lại.'); else netNote(); setTimeout(connect, 2000);
+    };
+    ws.onerror = () => {};
+    ws.onmessage = ev => {
+      let m; try { m = JSON.parse(ev.data); } catch (e) { return; } if (!m) return;
+      if (m.t === 'hi') { myId = m.id; if (Array.isArray(m.addrs) && typeof m.addrs[0] === 'string') lanAddr = m.addrs[0]; if (Array.isArray(m.rooms)) rooms = m.rooms; netNote(); }
+      else if (m.t === 'rooms') { if (Array.isArray(m.list)) { rooms = m.list.slice(0, 20); if (state === 'lobby') renderRooms(); netNote(); } }
+      else if (m.t === 'room') onRoom(m.room); else if (m.t === 'end') onEnd(m.board);
+      else if (m.t === 'err') { if (state === 'lobby') { $('lobbyNote').hidden = false; $('lobbyNote').textContent = String(m.msg).slice(0, 80); } }
+      else if (m.t === 's') setRemote(m.id, m.s); else if (m.t === 'bye') dropRemote(m.id);
+      else if (m.t === 'hit') onHit(m); else if (m.t === 'shot') onShot(m); else if (m.t === 'kill') onKill(m);
+    };
+  }
+  setInterval(() => { net({ t: 'p' }); }, 5000);
+  setInterval(() => { if (state === 'lobby') net({ t: 'rooms' }); }, 2500);
+
+  /* ================= vòng lặp, tự chỉnh độ phân giải ================= */
+  let last = performance.now(), fAcc = 0, fN = 0, cool = 0, lowRuns = 0;
+  function adapt(dt) {
+    fAcc += dt; fN++; if (fAcc < 1) return; const fps = fN / fAcc; fAcc = 0; fN = 0; cool -= 1;
+    if (state !== 'play' && state !== 'menu') return;
+    if (fps < 42 && resScale > .56) { resScale = Math.max(.55, resScale - (fps < 26 ? .15 : .08)); cool = 6; resize(); }
+    else if (fps > 57 && resScale < 1 && cool <= 0) { resScale = Math.min(1, resScale + .05); cool = 4; resize(); }
+    if (fps < 22 && resScale <= .56) { if (++lowRuns >= 3 && qName !== 'low') { lowRuns = 0; setQuality(qName === 'high' ? 'mid' : 'low'); if (state === 'play') banner('Giảm đồ họa', 'để giữ khung hình mượt'); } } else lowRuns = 0;
+  }
+  function frame(now) {
+    const raw = (now - last) / 1000, dt = Math.min(.1, raw); last = now;
+    if (state === 'play') { time += dt; if (!dead) updatePlayer(dt); if (mode === 'solo') { updateEnemies(dt); if (state === 'play') { updateBolts(dt); updateWave(dt); } } updateFx(dt); updateHud(); }
+    else if (state !== 'pause') {
+      time += dt; const t = reduced ? 3 : time;
+      if (state !== 'over') { camera.position.set(Math.sin(t * .11) * 1.6, 1.9 + Math.sin(t * .17) * .25, 9 + Math.cos(t * .06) * 9); camera.rotation.set(.06 + Math.sin(t * .13) * .03, Math.sin(t * .09) * .22, 0); }
+      for (const e of enemies) if (e.decor) { const d = e.decor, ang = d.a + t * d.w; e.pos.set(Math.cos(ang) * d.r, d.y + Math.sin(t * 1.3 + e.seed) * .4, d.z + Math.sin(ang) * d.r * 3); e.vel.set(1, 0, 1); animDrone(e, dt, -ang + (d.w > 0 ? PI : 0)); }
+      updateFx(dt);
+    }
+    if (mode === 'pvp' && (state === 'play' || state === 'pause')) updatePvp(Math.min(raw, .5));
+    renderFrame(); if (raw < .25) adapt(raw);
+    requestAnimationFrame(frame);
+  }
+
+  /* ================= điều khiển ================= */
+  const SENS = .0021, SENS_T = .0052; let lockAt = 0;
+  const look = (dx, dy, s) => { const k = s * lerp(1, Math.max(.22, GUN.adsFov * .9), adsK); P.yaw -= dx * k; P.pitch = clamp(P.pitch - dy * k, -1.45, 1.45); swayX = clamp(swayX - dx * .00012, -.03, .03); swayY = clamp(swayY - dy * .00012, -.03, .03); };
+  addEventListener('pointerdown', e => { lastPT = e.pointerType || 'mouse'; }, true);
+  const touches = new Map(); let moveId = null;
+  function setJoy(t) { const R = 52, dx = t.x - t.ox, dy = t.y - t.oy, l = Math.hypot(dx, dy) || 1, k = Math.min(1, R / l); joyX = dx * k / R; joyY = dy * k / R; $('knob').style.transform = `translate(${dx * k}px, ${dy * k}px)`; }
+  view.addEventListener('pointerdown', e => {
+    if (state !== 'play') return;
+    if (e.pointerType === 'mouse') { if (e.button === 0) firing = true; if (e.button === 2) ads = true; if (!locked && !dragLook) lock(); return; }
+    const r = stage.getBoundingClientRect(), x = e.clientX, y = e.clientY, kind = moveId === null && x - r.left < r.width * .45 ? 'move' : 'look';
+    touches.set(e.pointerId, { kind, ox: x, oy: y, x, y }); try { view.setPointerCapture(e.pointerId); } catch (err) {}
+    if (kind === 'move') { moveId = e.pointerId; const j = $('joy'); j.hidden = false; j.style.left = (x - r.left) + 'px'; j.style.top = (y - r.top) + 'px'; $('knob').style.transform = ''; }
+    e.preventDefault();
+  });
+  view.addEventListener('pointermove', e => {
+    if (state !== 'play') return;
+    if (e.pointerType === 'mouse') { if ((locked && performance.now() - lockAt > 180) || (dragLook && (e.buttons & 1))) look(e.movementX || 0, e.movementY || 0, SENS); return; }
+    const t = touches.get(e.pointerId); if (!t) return; if (t.kind === 'look') look(e.clientX - t.x, e.clientY - t.y, SENS_T); t.x = e.clientX; t.y = e.clientY; if (t.kind === 'move') setJoy(t);
+  });
+  const endTouch = e => {
+    if (e.pointerType === 'mouse') { if (e.button === 0) firing = false; if (e.button === 2) ads = false; return; }
+    const t = touches.get(e.pointerId); if (!t) return; touches.delete(e.pointerId); if (t.kind === 'move') { moveId = null; joyX = joyY = 0; $('joy').hidden = true; }
+  };
+  view.addEventListener('pointerup', endTouch); view.addEventListener('pointercancel', endTouch);
+  addEventListener('mouseup', e => { if (e.button === 0) firing = false; if (e.button === 2) ads = false; });
+  view.addEventListener('contextmenu', e => e.preventDefault());
+  const fb = $('fireBtn');
+  fb.addEventListener('pointerdown', e => { firing = true; touches.set(e.pointerId, { kind: 'look', x: e.clientX, y: e.clientY }); try { fb.setPointerCapture(e.pointerId); } catch (err) {} e.preventDefault(); });
+  fb.addEventListener('pointermove', e => { const t = touches.get(e.pointerId); if (!t) return; look(e.clientX - t.x, e.clientY - t.y, SENS_T); t.x = e.clientX; t.y = e.clientY; });
+  const fbEnd = e => { if (touches.delete(e.pointerId)) firing = false; };
+  fb.addEventListener('pointerup', fbEnd); fb.addEventListener('pointercancel', fbEnd); fb.addEventListener('contextmenu', e => e.preventDefault());
+  $('reloadBtn').addEventListener('pointerdown', e => { e.preventDefault(); reload(); });
+  $('adsBtn').addEventListener('pointerdown', e => { e.preventDefault(); ads = !ads; $('adsBtn').setAttribute('aria-pressed', String(ads)); });
+  $('jumpBtn').addEventListener('pointerdown', e => { e.preventDefault(); wantJump = true; });
+  $('swapBtn').addEventListener('pointerdown', e => { e.preventDefault(); setWeapon((cur + 1) % WEAPONS.length); });
+  view.addEventListener('wheel', e => { if (state !== 'play') return; e.preventDefault(); setWeapon((cur + (e.deltaY > 0 ? 1 : WEAPONS.length - 1)) % WEAPONS.length); }, { passive: false });
+  const GAMEKEYS = /^(Key[WASDRQ]|Arrow|Space|Shift|Digit[1-5])/;
+  addEventListener('keydown', e => {
+    if (state === 'play' && GAMEKEYS.test(e.code)) e.preventDefault(); keys.add(e.code); if (e.repeat) return;
+    if (e.code === 'KeyR') reload();
+    else if (/^Digit[1-5]$/.test(e.code)) setWeapon(+e.code.slice(5) - 1);
+    else if (e.code === 'KeyQ') setWeapon(lastW);
+    else if (e.code === 'KeyP' || (e.code === 'Escape' && (touchMode || dragLook))) { if (state === 'play') pause(); else if (state === 'pause') resume(); }
+  });
+  addEventListener('keyup', e => keys.delete(e.code));
+  addEventListener('blur', () => { keys.clear(); firing = false; ads = false; });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+  const nickEl = $('nick'); try { nickEl.value = localStorage.getItem('hm-nick') || ''; } catch (e) {}
+  const readNick = () => { nick = nickEl.value.trim().slice(0, 12) || 'Khách ' + (10 + Math.random() * 90 | 0); try { localStorage.setItem('hm-nick', nickEl.value.trim().slice(0, 12)); } catch (e) {} };
+  $('startBtn').addEventListener('click', () => start('solo')); $('againBtn').addEventListener('click', () => start('solo')); $('restartBtn').addEventListener('click', () => start('solo'));
+  $('pvpBtn').addEventListener('click', openLobby); $('lobbyBtn').addEventListener('click', () => { if (mode === 'pvp') leaveRoom(); else toMenu(); });
+  const segPick = id => { const seg = $(id); seg.querySelectorAll('button').forEach(b => b.addEventListener('click', () => seg.querySelectorAll('button').forEach(o => o.setAttribute('aria-pressed', String(o === b))))); return () => +seg.querySelector('[aria-pressed="true"]').dataset.v; };
+  const getDur = segPick('durSeg'), getMax = segPick('maxSeg');
+  $('createForm').addEventListener('submit', e => { e.preventDefault(); gestureAt = -1e9; net({ t: 'create', n: nick, name: $('roomNameIn').value, dur: getDur(), max: getMax() }); });
+  $('lobbyBack').addEventListener('click', () => toMenu());
+  $('roomStart').addEventListener('click', () => { gestureAt = performance.now(); net({ t: 'start' }); });
+  $('roomLeave').addEventListener('click', leaveRoom);
+  $('resBack').addEventListener('click', () => { if (!room) { openLobby(); return; } state = 'room'; show('room'); renderRoom(); if (room.state === 'play') { gestureAt = performance.now(); startMatch(); } });
+  $('resumeBtn').addEventListener('click', resume); $('pauseBtn').addEventListener('click', () => pause());
+  $('soundBtn').addEventListener('click', () => { soundOn = !soundOn; $('soundBtn').setAttribute('aria-pressed', String(soundOn)); initAudio(); if (master) master.gain.value = soundOn ? .9 : 0; });
+  document.querySelectorAll('.seg button[data-q]').forEach(b => b.addEventListener('click', () => setQuality(b.dataset.q)));
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(stage); else addEventListener('resize', resize);
+
+  /* ================= khởi động ================= */
+  try { const s = localStorage.getItem('hm-q'); if (s && QUAL[s]) qName = s; } catch (e) {}
+  setQuality(qName);
+  function decor() { wave = 1; for (let i = 0; i < 4; i++) spawn(i === 3 ? 'heavy' : 'scout', { a: i * 1.7, r: 1.6 + (i % 2) * .8, y: 3.4 + i * .7, z: -4 - i * 3, w: (i % 2 ? -1 : 1) * (.22 + i * .04) }); }
+  decor();
+  progress(.95); await tick();
+  state = 'menu'; renderFrame(); progress(1);
+  $('loadBar').hidden = true; $('startBtn').disabled = false; $('startBtn').textContent = 'Chơi đơn'; ready = true; if (!LAN) $('pvpBtn').textContent = 'Đấu trực tuyến'; renderWbar(); netNote(); connect();
+  if (best > 0) { $('menuNote').hidden = false; $('menuNote').textContent = 'Kỷ lục: ' + fmt(best) + ' điểm'; }
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>

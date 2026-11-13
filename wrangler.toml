@@ -1,0 +1,19 @@
+name = "hem-mua"
+main = "src/worker.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
+preview_urls = false
+
+# Trang game trong public/ được nhúng thẳng vào Worker dưới dạng văn bản.
+[[rules]]
+type = "Text"
+globs = ["**/*.html", "**/three.min.js", "**/*.txt"]
+fallthrough = true
+
+[[durable_objects.bindings]]
+name = "GAME"
+class_name = "GameServer"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["GameServer"]

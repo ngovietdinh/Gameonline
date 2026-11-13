@@ -1,0 +1,14 @@
+{
+  "name": "hem-mua",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hẻm Mưa: game bắn súng 3D đấu nhiều người, chạy trong mạng LAN (Node) hoặc trên Cloudflare Workers",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}

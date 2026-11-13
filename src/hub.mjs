@@ -12,7 +12,7 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
   const send = (c, obj) => c.out(JSON.stringify(obj));
   const toRoom = (r, from, obj) => { const s = JSON.stringify(obj); for (const c of r.members) if (c !== from) c.out(s); };
   function newCode() { let c; do { c = ''; for (let i = 0; i < 4; i++) c += CODE[Math.random() * CODE.length | 0]; } while (rooms.has(c)); return c; }
-  const roomInfo = r => ({ code: r.code, name: r.name, n: r.members.size, max: r.max, dur: r.dur, state: r.state, left: r.state === 'play' ? Math.max(0, r.endAt - Date.now()) : 0 });
+  const roomInfo = r => ({ code: r.code, name: r.name, n: r.members.size, max: r.max, dur: r.dur, map: r.map, state: r.state, left: r.state === 'play' ? Math.max(0, r.endAt - Date.now()) : 0 });
   const roomFull = r => Object.assign(roomInfo(r), { host: r.host, players: [...r.members].map(c => ({ id: c.id, n: c.name })) });
   function pushRooms(to) {
     const msg = { t: 'rooms', list: [...rooms.values()].map(roomInfo) };
@@ -58,7 +58,7 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
       case 'create': {
         if (rooms.size >= MAX_ROOMS) { send(c, { t: 'err', msg: 'Máy chủ đã đủ số phòng.' }); break; }
         c.name = clean(m.n, 12) || c.name;
-        const room = { code: newCode(), name: clean(m.name, 20) || 'Phòng của ' + c.name, host: c.id, dur: clampNum(m.dur, .1, 30, 5), max: Math.round(clampNum(m.max, 2, MAX_ROOM_PLAYERS, 8)), state: 'wait', endAt: 0, members: new Set(), timer: null };
+        const room = { code: newCode(), name: clean(m.name, 20) || 'Phòng của ' + c.name, host: c.id, dur: clampNum(m.dur, .1, 30, 5), max: Math.round(clampNum(m.max, 2, MAX_ROOM_PLAYERS, 8)), map: Math.round(clampNum(m.map, 0, 9, 0)), state: 'wait', endAt: 0, members: new Set(), timer: null };
         rooms.set(room.code, room); log('  phòng ' + room.code + ' "' + room.name + '" do ' + c.name + ' tạo');
         join(c, room); break;
       }
@@ -82,6 +82,10 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
       }
       case 'shot':
         if (r && r.state === 'play' && Array.isArray(m.e) && m.e.length === 3 && m.e.every(Number.isFinite)) toRoom(r, c, { t: 'shot', from: c.id, w: Math.min(9, Math.max(0, m.w | 0)), e: m.e.map(num) });
+        break;
+      case 'rk': // tên lửa hoặc lựu đạn: các máy khác tự mô phỏng đường bay để hiển thị
+        if (r && r.state === 'play' && Array.isArray(m.o) && Array.isArray(m.v) && m.o.length === 3 && m.v.length === 3 && m.o.every(Number.isFinite) && m.v.every(Number.isFinite))
+          toRoom(r, c, { t: 'rk', from: c.id, k: m.k ? 1 : 0, o: m.o.map(num), v: m.v.map(x => Math.round(Math.max(-1, Math.min(1, x)) * 1000) / 1000) });
         break;
       case 'kill': if (r && r.state === 'play') toRoom(r, c, { t: 'kill', from: c.id, by: typeof m.by === 'string' ? m.by.slice(0, 12) : null }); break;
     }

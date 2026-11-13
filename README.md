@@ -58,6 +58,16 @@ Ghi chú:
 - Máy chủ chứa tối đa 20 phòng và 64 người cùng lúc.
 - Vẫn có chế độ chơi đơn chống máy bay tuần tra.
 
+## Bản đồ
+
+Chọn bản đồ ở màn hình đầu (chơi đơn) hoặc lúc tạo phòng (đấu nhiều người).
+
+| Bản đồ | Đặc điểm |
+|---|---|
+| Hẻm | Hẻm hẹp, sân trong và một con phố lớn ở cuối hẻm. Nhiều góc khuất, hợp đánh gần |
+| Chợ đêm | Quảng trường rộng có đài phun nước, hai dãy sạp, sân khấu. Tầm nhìn xa, hợp súng tỉa |
+| Công trường | Nhà hai tầng đang xây, giàn giáo, bãi ống cống, lán chỉ huy, cần trục. Nửa kín nửa trống |
+
 ## Vũ khí
 
 | Phím | Súng | Băng đạn | Đặc điểm |
@@ -67,8 +77,13 @@ Ghi chú:
 | 3 | Hoa cải | 6 | 9 viên chùm mỗi phát, rất mạnh ở sát bên |
 | 4 | Súng tỉa | 5 | Một phát rất mạnh, giữ chuột phải để nhìn qua ống ngắm |
 | 5 | Súng lục | 12 | Bắn từng phát, rút nhanh, nạp nhanh |
+| 6 | Trung liên | 75 | Băng đạn lớn, bắn dài, nạp lâu |
+| 7 | Tên lửa | 1 | Bay thẳng, nổ lan rộng 6,5 m, nạp lâu. Đứng gần chỗ nổ cũng mất máu |
+| 8 | Phóng lựu | 6 | Lựu đạn bay cầu vồng, nổ khi chạm, nổ lan 4,8 m |
 
-Đổi súng bằng phím 1 đến 5, lăn chuột, hoặc Q để về khẩu vừa dùng. Trên điện thoại bấm nút Đổi.
+Đổi súng bằng phím 1 đến 8, lăn chuột, hoặc Q để về khẩu vừa dùng. Trên điện thoại bấm nút Đổi.
+
+Đường đạn hiện thành vệt sáng bay từ nòng tới điểm chạm, kèm một vệt khói mờ. Đạn của mình màu vàng, đạn của người khác màu đỏ cam.
 
 ## Nếu bị giật
 

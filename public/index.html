@@ -805,9 +805,22 @@
 
   /* ================= súng cầm tay ================= */
   const GS = .35, vm = new T.Group(), gun = new T.Group(); gun.scale.setScalar(GS); vm.add(gun); camera.add(vm); vm.visible = false;
+  const camoTex = (() => {
+    const c = mkCanvas(256, 256), g = c.getContext('2d'); g.fillStyle = '#5c6040'; g.fillRect(0, 0, 256, 256);
+    const cols = ['#3c4a2b', '#6f5c3c', '#22271b', '#8b8a5e'];
+    for (let i = 0; i < 64; i++) {
+      g.fillStyle = cols[i % 4]; const x = Math.random() * 256, y = Math.random() * 256;
+      for (let k = 0; k < 4; k++) {
+        const ox = x + (Math.random() - .5) * 60, oy = y + (Math.random() - .5) * 40, rx = 12 + Math.random() * 26, ry = 8 + Math.random() * 16, ro = Math.random() * 3;
+        for (const dx of [-256, 0, 256]) for (const dy of [-256, 0, 256]) { g.beginPath(); g.ellipse(ox + dx, oy + dy, rx, ry, ro, 0, TAU); g.fill(); }
+      }
+    }
+    for (let i = 0; i < 5000; i++) { g.fillStyle = `rgba(0,0,0,${Math.random() * .12})`; g.fillRect(Math.random() * 256, Math.random() * 256, 1.5, 1.5); }
+    return texOf(c, true);
+  })();
   const GM = std({ color: 0x1e2023, metalness: .55, roughness: 1, roughnessMap: TX.scratch.roughnessMap, envMapIntensity: .8 });
   const GM2 = std({ color: 0x15171a, metalness: .85, roughness: .52 }), PM = std({ color: 0x17191c, roughness: .62, normalMap: TX.concrete.normalMap, normalScale: new T.Vector2(.25, .25) });
-  const GLV = std({ color: 0x0e0f11, roughness: .88, normalMap: TX.concrete.normalMap, normalScale: new T.Vector2(.5, .5) }), SLV = std({ color: 0x14171a, roughness: .9, normalMap: TX.plaster.normalMap, normalScale: new T.Vector2(.6, .6) });
+  const GLV = std({ color: 0x0e0f11, roughness: .88, normalMap: TX.concrete.normalMap, normalScale: new T.Vector2(.5, .5) }), SLV = std({ map: camoTex, color: 0xb0b0b0, roughness: .9, normalMap: TX.plaster.normalMap, normalScale: new T.Vector2(.6, .6) });
   const bxg = (w, h, d) => new T.BoxGeometry(w, h, d), cyg = (r1, r2, l, s, open) => new T.CylinderGeometry(r1, r2, l, s || 12, 1, !!open);
   const gp = (par, geo, mat, x, y, z, rx, ry, rz) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx || 0, ry || 0, rz || 0); m.receiveShadow = true; par.add(m); return m; };
   const limb = (par, a, b, r1, r2, mat) => { const va = new T.Vector3(...a), vb = new T.Vector3(...b), d = vb.clone().sub(va), m = new T.Mesh(cyg(r2, r1, d.length(), 10), mat); m.position.copy(va).addScaledVector(d, .5); m.quaternion.setFromUnitVectors(new T.Vector3(0, 1, 0), d.normalize()); par.add(m); return m; };
@@ -1057,7 +1070,7 @@
   let rooms = [], room = null, matchEnd = 0, gestureAt = -1e9, ghost = false, lastBeep = 0;
   const inMatch = () => mode === 'pvp' && (state === 'play' || state === 'pause');
   const mmss = ms => { const sec = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0'); };
-  const remotes = new Map(), PARTS = [[.45, .4, 1], [1, .42, 1], [1.55, .26, 1.6]], PVP_DMG = .75;
+  const remotes = new Map(), PARTS = [[.42, .3, 1], [.9, .3, 1], [1.28, .32, 1], [1.64, .19, 1.6]], PVP_DMG = .75;
   const SPAWNS = [[0, 18], [0, -20], [-2.4, -6], [2.4, 8], [9, -3], [12.5, 3], [-2, 2], [2, -14]];
   const net = o => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
   function resolve(p, r) {
@@ -1389,18 +1402,97 @@
   }
 
   /* ================= đấu mạng LAN ================= */
-  const AVG = { torso: cyg(.24, .3, .74, 12), leg: bxg(.17, .78, .2), head: new T.SphereGeometry(.15, 14, 10), hat: new T.ConeGeometry(.42, .22, 18), arm: cyg(.065, .055, .56, 8), gun: bxg(.06, .09, .7) };
-  const COATS = [0xd8b020, 0x2f6fd0, 0xc23a34, 0x2f9a5a, 0x8a4fd0, 0xd07a2a].map(c => std({ color: c, roughness: .36 }));
-  const SKIN = std({ color: 0xd9a882, roughness: .6 }), STRAW = std({ color: 0xe2c98a, roughness: .8, normalMap: TX.wood.normalMap }), PANTS = std({ color: 0x15171b, roughness: .8 });
+  /* ---------- nhân vật lính: dựng một lần, mọi người chơi dùng chung hình khối ---------- */
+  const SM = {
+    camo: std({ map: camoTex, roughness: .92 }), vest: std({ color: 0x3a3c2a, roughness: .9, normalMap: TX.concrete.normalMap, normalScale: new T.Vector2(.5, .5) }),
+    dark: std({ color: 0x121416, roughness: .75 }), boot: std({ color: 0x2b231c, roughness: .7 }), skin: std({ color: 0xc99a78, roughness: .65 }),
+    helmet: std({ map: camoTex, color: 0x8a8a8a, roughness: .8 }), glass: M.glass, gun: GM2, metal: GM
+  };
+  const IDM = [0xffc928, 0x3d8bff, 0xff4b3e, 0x35d07f, 0xb26bff, 0xff8a2a].map(c => std({ color: c, roughness: .6, emissive: c, emissiveIntensity: .35 }));
+  const WLEN = [1, .76, 1.06, 1.34, .46];
+  function mergeGeos(list) {
+    let nv = 0, ni = 0; for (const it of list) { nv += it[0].attributes.position.count; ni += it[0].index.count; }
+    const P3 = new Float32Array(nv * 3), N3 = new Float32Array(nv * 3), U2 = new Float32Array(nv * 2), I = new Uint16Array(ni), nm = new T.Matrix3(), v = new T.Vector3();
+    let vo = 0, io = 0;
+    for (const [g, m] of list) {
+      const p = g.attributes.position, n = g.attributes.normal, u = g.attributes.uv, ix = g.index; nm.getNormalMatrix(m);
+      for (let i = 0; i < p.count; i++) {
+        v.fromBufferAttribute(p, i).applyMatrix4(m); P3[(vo + i) * 3] = v.x; P3[(vo + i) * 3 + 1] = v.y; P3[(vo + i) * 3 + 2] = v.z;
+        v.fromBufferAttribute(n, i).applyMatrix3(nm).normalize(); N3[(vo + i) * 3] = v.x; N3[(vo + i) * 3 + 1] = v.y; N3[(vo + i) * 3 + 2] = v.z;
+        U2[(vo + i) * 2] = u.getX(i); U2[(vo + i) * 2 + 1] = u.getY(i);
+      }
+      for (let i = 0; i < ix.count; i++) I[io + i] = ix.getX(i) + vo;
+      vo += p.count; io += ix.count;
+    }
+    const out = new T.BufferGeometry(); out.setAttribute('position', new T.BufferAttribute(P3, 3)); out.setAttribute('normal', new T.BufferAttribute(N3, 3)); out.setAttribute('uv', new T.BufferAttribute(U2, 2));
+    out.setIndex(new T.BufferAttribute(I, 1)); out.computeBoundingSphere(); return out;
+  }
+  const SOLDIER = (() => {
+    const bones = {}, m4 = new T.Matrix4(), q = new T.Quaternion(), eu = new T.Euler(), pv = new T.Vector3(), sv = new T.Vector3(), dv = new T.Vector3();
+    const add = (bone, mat, geo) => { const b = bones[bone] || (bones[bone] = {}); (b[mat] || (b[mat] = [])).push([geo, m4.clone()]); };
+    const put = (bone, mat, geo, x, y, z, rx, ry, rz, sx, sy, sz) => { m4.compose(pv.set(x, y, z), q.setFromEuler(eu.set(rx || 0, ry || 0, rz || 0)), sv.set(sx || 1, sy || 1, sz || 1)); add(bone, mat, geo); };
+    const seg = (bone, mat, a, b, r1, r2) => { // khối trụ thuôn từ a (bán kính r1) tới b (bán kính r2)
+      dv.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]); const len = dv.length();
+      m4.compose(pv.set((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2), q.setFromUnitVectors(UP, dv.normalize()), sv.set(1, 1, 1)); add(bone, mat, new T.CylinderGeometry(r2, r1, len, 10));
+    };
+    const box = (w, h, d) => new T.BoxGeometry(w, h, d), sph = r => new T.SphereGeometry(r, 12, 9);
+    // hông, thắt lưng
+    put('hips', 'camo', box(.33, .2, .21), 0, -.02, 0); put('hips', 'dark', box(.35, .055, .23), 0, .07, 0);
+    put('hips', 'vest', box(.06, .11, .1), .19, 0, 0); put('hips', 'vest', box(.06, .11, .1), -.19, .0, -.03); put('hips', 'vest', box(.14, .1, .05), 0, -.01, -.13);
+    // đùi (phải có bao súng lục)
+    for (const [bn, sx] of [['legL', 1], ['legR', -1]]) {
+      seg(bn, 'camo', [0, .0, 0], [0, -.44, 0], .09, .07); put(bn, 'camo', box(.1, .12, .05), sx * .06, -.2, .02);
+    }
+    put('legR', 'dark', box(.045, .17, .09), -.1, -.2, 0); put('legR', 'dark', box(.03, .06, .04), -.105, -.09, -.02, .3); put('legR', 'dark', box(.2, .03, .2), 0, -.14, 0);
+    // ống chân, bọc gối, giày
+    put('shin', 'dark', sph(1), 0, -.01, .055, 0, 0, 0, .062, .075, .04); seg('shin', 'camo', [0, .02, 0], [0, -.39, 0], .07, .055);
+    seg('shin', 'boot', [0, -.33, 0], [0, -.46, 0], .058, .06); put('shin', 'boot', box(.098, .085, .25), 0, -.455, .045); put('shin', 'boot', sph(1), 0, -.45, .15, 0, 0, 0, .05, .042, .06);
+    put('shin', 'dark', box(.104, .028, .262), 0, -.5, .045);
+    // thân, áo giáp, túi đạn, ba lô
+    put('spine', 'camo', new T.CylinderGeometry(.185, .155, .52, 12), 0, .26, 0, 0, 0, 0, 1, 1, .7);
+    put('spine', 'vest', box(.31, .34, .06), 0, .3, .115); put('spine', 'vest', box(.31, .36, .05), 0, .3, -.105); put('spine', 'vest', box(.365, .14, .215), 0, .17, 0);
+    for (const sx of [-1, 1]) { put('spine', 'vest', box(.065, .03, .22), sx * .1, .5, 0); put('spine', 'camo', sph(.092), sx * .215, .47, 0); }
+    for (let i = 0; i < 3; i++) { put('spine', 'vest', box(.078, .13, .045), -.09 + i * .09, .2, .165); put('spine', 'dark', box(.05, .03, .028), -.09 + i * .09, .275, .165); }
+    put('spine', 'vest', box(.17, .07, .035), 0, .4, .16); put('spine', 'dark', box(.05, .12, .06), .195, .23, -.02); seg('spine', 'dark', [.195, .28, -.03], [.21, .66, -.07], .005, .003);
+    put('spine', 'vest', box(.27, .34, .13), 0, .3, -.195); put('spine', 'vest', box(.275, .05, .14), 0, .485, -.195); put('spine', 'camo', new T.CylinderGeometry(.055, .055, .31, 10), 0, .1, -.215, 0, 0, PI / 2);
+    for (const sx of [-1, 1]) put('spine', 'vest', box(.05, .18, .1), sx * .16, .25, -.195);
+    put('spine', 'id', box(.2, .035, .012), 0, .44, -.264); for (const sx of [-1, 1]) put('spine', 'id', box(.012, .07, .07), sx * .306, .46, 0);
+    seg('spine', 'dark', [0, .49, 0], [0, .61, 0], .06, .056);
+    // tay phải nắm báng, tay trái đỡ ốp lót
+    const RS = [-.215, .47, 0], RE = [-.275, .26, .1], RH = [-.115, .4, .225], LS = [.215, .47, 0], LE = [.14, .29, .3], LH = [-.1, .45, .58];
+    seg('spine', 'camo', RS, RE, .07, .058); seg('spine', 'camo', RE, RH, .056, .046); put('spine', 'dark', sph(1), RE[0], RE[1], RE[2], 0, 0, 0, .064, .07, .064); put('spine', 'dark', sph(1), RH[0], RH[1], RH[2], 0, 0, 0, .048, .052, .056);
+    seg('spine', 'camo', LS, LE, .07, .058); seg('spine', 'camo', LE, LH, .056, .046); put('spine', 'dark', sph(1), LE[0], LE[1], LE[2], 0, 0, 0, .064, .07, .064); put('spine', 'dark', sph(1), LH[0], LH[1] - .01, LH[2], 0, 0, 0, .05, .05, .058);
+    // đầu, khăn trùm, kính, mũ sắt, tai nghe
+    put('head', 'skin', sph(.098), 0, .02, 0, 0, 0, 0, 1, 1.12, 1.06); put('head', 'dark', new T.CylinderGeometry(.1, .092, .1, 12), 0, -.035, .002, 0, 0, 0, 1, 1, 1.05);
+    put('head', 'glass', box(.165, .05, .03), 0, .04, .092); put('head', 'dark', box(.176, .062, .02), 0, .04, .08); put('head', 'dark', new T.CylinderGeometry(.105, .105, .024, 14), 0, .04, 0);
+    put('head', 'helmet', new T.SphereGeometry(.13, 16, 10, 0, TAU, 0, PI * .53), 0, .035, -.005, 0, 0, 0, 1, .96, 1.1);
+    for (const sx of [-1, 1]) { put('head', 'dark', box(.012, .03, .1), sx * .13, .035, 0); put('head', 'dark', new T.CylinderGeometry(.046, .046, .03, 12), sx * .113, -.005, -.005, 0, 0, PI / 2); put('head', 'dark', box(.006, .1, .02), sx * .092, -.05, .035); }
+    put('head', 'dark', box(.046, .04, .016), 0, .1, .135); put('head', 'vest', box(.09, .05, .04), 0, .06, -.145); put('head', 'id', box(.05, .012, .08), 0, .161, -.03);
+    seg('head', 'dark', [.1, -.03, .02], [.03, -.065, .1], .005, .005);
+    // súng trường
+    put('gun', 'gun', box(.045, .07, .26), 0, 0, .3); put('gun', 'gun', box(.04, .065, .2), 0, -.012, .08); put('gun', 'dark', box(.042, .08, .02), 0, -.012, -.03);
+    put('gun', 'dark', box(.044, .05, .27), 0, .004, .56); put('gun', 'dark', box(.02, .01, .5), 0, .04, .42); seg('gun', 'metal', [0, .008, .68], [0, .008, .86], .011, .011); seg('gun', 'metal', [0, .008, .84], [0, .008, .9], .016, .016);
+    put('gun', 'gun', box(.03, .09, .04), 0, -.075, .2, .3); put('gun', 'metal', box(.026, .14, .05), 0, -.095, .33, -.15);
+    put('gun', 'dark', box(.03, .025, .06), 0, .05, .3); seg('gun', 'dark', [0, .075, .26], [0, .075, .34], .02, .02);
+    const out = {}; for (const bn in bones) { out[bn] = []; for (const mk in bones[bn]) out[bn].push([mergeGeos(bones[bn][mk]), mk]); }
+    return out;
+  })();
+  const rFlashMat = new T.SpriteMaterial({ map: flashMat.map, transparent: true, blending: T.AdditiveBlending, depthWrite: false }); rFlashMat.color.setRGB(5, 3.6, 2);
   function makeRemote(id) {
     let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-    const g = new T.Group(), coat = COATS[h % COATS.length];
-    const pt = (geo, mat, x, y, z, rx, ry, rz) => { const m = new T.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx || 0, ry || 0, rz || 0); m.castShadow = true; m.receiveShadow = true; g.add(m); };
-    pt(AVG.leg, PANTS, -.11, .39, 0); pt(AVG.leg, PANTS, .11, .39, 0); pt(AVG.torso, coat, 0, 1.13, 0); pt(AVG.head, SKIN, 0, 1.6, 0); pt(AVG.hat, STRAW, 0, 1.8, 0);
-    pt(AVG.arm, coat, .25, 1.24, .22, PI / 2 - .25, 0, .12); pt(AVG.arm, coat, -.2, 1.22, .26, PI / 2 - .2, 0, -.55); pt(AVG.gun, GM2, .16, 1.26, .55);
+    const g = new T.Group(), idMat = IDM[h % IDM.length]; g.rotation.order = 'YXZ';
+    const bone = (par, name, x, y, z) => {
+      const b = new T.Group(); b.position.set(x, y, z); par.add(b);
+      for (const [geo, mk] of SOLDIER[name] || []) { const m = new T.Mesh(geo, mk === 'id' ? idMat : SM[mk]); m.castShadow = true; m.receiveShadow = true; b.add(m); }
+      return b;
+    };
+    const hips = bone(g, 'hips', 0, .93, 0), legL = bone(hips, 'legL', .1, 0, 0), legR = bone(hips, 'legR', -.1, 0, 0), shinL = bone(legL, 'shin', 0, -.43, 0), shinR = bone(legR, 'shin', 0, -.43, 0);
+    const spine = bone(hips, 'spine', 0, .06, 0), head = bone(spine, 'head', 0, .62, 0), gunB = bone(spine, 'gun', -.11, .49, .02);
+    const muzzle = new T.Object3D(); muzzle.position.set(0, .008, .93); gunB.add(muzzle);
+    const fl = new T.Sprite(rFlashMat); fl.scale.set(.5, .5, 1); fl.visible = false; muzzle.add(fl);
     const c = mkCanvas(256, 64), tex = new T.CanvasTexture(c), sp = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false }));
-    sp.scale.set(1.8, .45, 1); sp.position.y = 2.25; g.add(sp); g.visible = false; scene.add(g);
-    return { id, g, c, tex, nick: '', alive: false, k: 0, d: 0, tx: 0, ty: 0, tz: 0, tyaw: 0, yaw: 0 };
+    sp.scale.set(1.8, .45, 1); sp.position.y = 2.12; g.add(sp); g.visible = false; scene.add(g);
+    return { id, g, c, tex, sp, hips, legL, legR, shinL, shinR, spine, head, gunB, muzzle, fl, nick: '', alive: false, k: 0, d: 0, tx: 0, ty: 0, tz: 0, tyaw: 0, yaw: 0, gy: 0, spd: 0, ph: 0, pt: 0, tpt: 0, w: 0, deadT: 9, flashT: 0 };
   }
   function setLabel(r) {
     const x = r.c.getContext('2d'); x.clearRect(0, 0, 256, 64); x.font = '800 34px "Saira Condensed", system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
@@ -1412,8 +1504,9 @@
     if (typeof id !== 'string' || id === myId || !inMatch()) return;
     if (!s || s.m !== 'pvp' || ![s.x, s.y, s.z, s.yw].every(Number.isFinite)) { dropRemote(id); return; }
     let r = remotes.get(id);
-    if (!r) { r = makeRemote(id); remotes.set(id, r); r.g.position.set(s.x, clamp(s.y, 0, 6), s.z); r.yaw = s.yw; }
-    r.tx = clamp(s.x, -5, 16); r.ty = clamp(s.y, 0, 6); r.tz = clamp(s.z, -25, 25); r.tyaw = s.yw; r.alive = s.a === 1; r.k = s.k | 0; r.d = s.d | 0;
+    if (!r) { r = makeRemote(id); remotes.set(id, r); r.g.position.set(s.x, clamp(s.y, 0, 6), s.z); r.gy = r.g.position.y; r.yaw = s.yw; }
+    r.tx = clamp(s.x, -5, 16); r.ty = clamp(s.y, 0, 6); r.tz = clamp(s.z, -25, 25); r.tyaw = s.yw; r.alive = s.a === 1; r.k = s.k | 0; r.d = s.d | 0; r.tpt = clamp(+s.pt || 0, -1.5, 1.5);
+    const wi = clamp(s.w | 0, 0, WLEN.length - 1); if (wi !== r.w) { r.w = wi; r.gunB.scale.z = WLEN[wi]; }
     const n = String(s.n == null ? '' : s.n).slice(0, 12).trim() || 'Khách'; if (n !== r.nick) { r.nick = n; setLabel(r); }
   }
   function netNote() {
@@ -1422,7 +1515,7 @@
       : !online ? 'Đang nối máy chủ…'
       : (rooms.length ? rooms.length + ' phòng đang mở.' : 'Đã nối máy chủ. Chưa có phòng nào.') + (lanAddr ? SHARE + lanAddr : '');
   }
-  function sendState() { if (inMatch()) net({ t: 's', x: r2(P.pos.x), y: r2(P.pos.y), z: r2(P.pos.z), yw: r2(P.yaw), a: dead ? 0 : 1, k: myK, d: myD }); }
+  function sendState() { if (inMatch()) net({ t: 's', x: r2(P.pos.x), y: r2(P.pos.y), z: r2(P.pos.z), yw: r2(P.yaw), pt: r2(P.pitch), w: cur, a: dead ? 0 : 1, k: myK, d: myD }); }
   function respawn() {
     let bestS = SPAWNS[0], bestD = -1;
     for (const s of SPAWNS) { let d = 999; for (const r of remotes.values()) if (r.alive) d = Math.min(d, Math.hypot(r.g.position.x - s[0], r.g.position.z - s[1])); d += Math.random() * 5; if (d > bestD) { bestD = d; bestS = s; } }
@@ -1448,7 +1541,7 @@
   }
   function onShot(m) {
     const r = remotes.get(m.from), e = m.e; if (!inMatch() || !r || !Array.isArray(e) || e.length !== 3 || !e.every(Number.isFinite)) return;
-    v1.set(r.g.position.x, r.g.position.y + 1.25, r.g.position.z); v2.set(e[0], e[1], e[2]); tracer(v1, v2);
+    r.g.updateMatrixWorld(true); r.muzzle.getWorldPosition(v1); v2.set(e[0], e[1], e[2]); tracer(v1, v2); r.flashT = .07; rFlashMat.rotation = rnd(0, TAU);
     const vol = clamp(1 - v1.distanceTo(camera.position) / 55, 0, 1) * .75; if (vol > .02) sfx.shot(m.w | 0, vol);
   }
   function onKill(m) {
@@ -1466,8 +1559,21 @@
     if (dead && !ghost) { respawnT -= dt; if (respawnT <= 0) respawn(); }
     const k = Math.min(1, dt * 14);
     for (const r of remotes.values()) {
-      const p = r.g.position; p.x += (r.tx - p.x) * k; p.y += (r.ty - p.y) * k; p.z += (r.tz - p.z) * k;
-      let da = (r.tyaw - r.yaw) % TAU; if (da > PI) da -= TAU; else if (da < -PI) da += TAU; r.yaw += da * k; r.g.rotation.y = r.yaw + PI; r.g.visible = r.alive;
+      const p = r.g.position, ox = p.x, oz = p.z; p.x += (r.tx - p.x) * k; p.z += (r.tz - p.z) * k; r.gy += (r.ty - r.gy) * k;
+      let da = (r.tyaw - r.yaw) % TAU; if (da > PI) da -= TAU; else if (da < -PI) da += TAU; r.yaw += da * k; r.g.rotation.y = r.yaw + PI;
+      // dáng chạy: chân đánh theo quãng đường thật, gối gập lúc chân vung tới, người nhún và hơi chúi
+      r.spd += (Math.hypot(p.x - ox, p.z - oz) / Math.max(dt, .001) - r.spd) * Math.min(1, dt * 10);
+      const amp = clamp(r.spd / 5, 0, 1), air = clamp(r.gy / .5, 0, 1); r.ph += r.spd * dt * 2.1; const sn = Math.sin(r.ph), cs = Math.cos(r.ph);
+      r.legL.rotation.x = -sn * .78 * amp - air * .5; r.legR.rotation.x = sn * .78 * amp - air * .25;
+      r.shinL.rotation.x = Math.max(0, cs) * 1.05 * amp + air * .9; r.shinR.rotation.x = Math.max(0, -cs) * 1.05 * amp + air * .6;
+      r.hips.position.y = .93 - Math.abs(sn) * .035 * amp; r.hips.rotation.y = sn * .08 * amp;
+      r.pt += (r.tpt - r.pt) * k; r.spine.rotation.x = -r.pt * .55 + amp * .12; r.spine.rotation.y = -sn * .1 * amp; r.head.rotation.x = -r.pt * .35;
+      if (r.alive) { r.deadT = -1; r.g.rotation.x = 0; p.y = r.gy; r.g.visible = true; r.sp.visible = true; }
+      else { // bị hạ: ngã ngửa ra sau rồi biến mất trước khi hồi sinh
+        if (r.deadT < 0) r.deadT = 0; r.deadT += dt; const f = smooth(0, .5, r.deadT);
+        r.g.rotation.x = -f * PI / 2; p.y = r.gy + f * .15; r.g.visible = r.deadT < 2.7; r.sp.visible = false;
+      }
+      r.flashT -= dt; r.fl.visible = r.flashT > 0;
     }
     presT -= dt; if (presT <= 0) { presT = LAN ? .05 : .085; sendState(); }
     boardT -= dt; if (boardT <= 0) { boardT = .5; updateBoard(); }

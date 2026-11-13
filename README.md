@@ -53,6 +53,7 @@ Ghi chú:
 
 - Mỗi phòng là một trận riêng, có đồng hồ đếm ngược. Hết giờ, ai hạ nhiều nhất thắng (bằng nhau thì ai chết ít hơn xếp trên), rồi cả phòng về phòng chờ để chủ phòng bắt đầu trận mới.
 - Chủ phòng rời đi thì người vào sớm nhất còn lại lên làm chủ phòng. Phòng trống tự đóng.
+- Người chơi khác hiện ra là lính: mũ sắt, kính, áo giáp, ba lô, quân phục rằn ri; chân tay cử động khi chạy, người ngả theo hướng ngắm, bị hạ thì ngã xuống. Mỗi người có một màu nhận diện trên vai, mũ và ba lô.
 - Chết thì 3 giây sau hồi sinh ở điểm xa đối thủ nhất. Bắn trúng đầu gây sát thương gấp 1,6 lần. Không trúng đạn 5 giây thì máu tự hồi.
 - Máy chủ chứa tối đa 20 phòng và 64 người cùng lúc.
 - Vẫn có chế độ chơi đơn chống máy bay tuần tra.

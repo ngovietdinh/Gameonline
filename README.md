@@ -70,6 +70,12 @@ Ghi chú:
 
 Đổi súng bằng phím 1 đến 5, lăn chuột, hoặc Q để về khẩu vừa dùng. Trên điện thoại bấm nút Đổi.
 
+## Nếu bị giật
+
+- Góc trên phải hiện số khung hình mỗi giây và mức đồ họa đang chạy.
+- Game tự giảm độ nét rồi tự hạ mức đồ họa khi dưới 45 khung hình mỗi giây. Muốn chọn tay thì đổi **Đồ họa** ở màn hình đầu hoặc lúc tạm dừng: Thấp nhẹ nhất (không bóng đổ, ít đèn, không hậu kỳ), Vừa là mặc định, Cao đẹp nhất nhưng nặng.
+- Đóng bớt thẻ trình duyệt khác và bật tăng tốc phần cứng trong cài đặt trình duyệt.
+
 ## Điều khiển
 
 - Máy tính: WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, 1 đến 5 đổi súng, Shift chạy nhanh, Space nhảy, Esc tạm dừng.

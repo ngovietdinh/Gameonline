@@ -53,6 +53,8 @@
   .tl b { font-family: var(--display); font-weight: 800; font-size: 26px; line-height: 1; letter-spacing: .03em; }
   .tl span { font-size: 13px; color: var(--muted); }
   .tr { position: absolute; top: 10px; right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 8px; }
+  #stage.touch #fpsTxt { display: none; }
+  #fpsTxt { position: absolute; top: 60px; right: max(16px, env(safe-area-inset-right, 0px)); font-size: 11px; color: var(--muted); text-shadow: 0 1px 3px #000; }
   .icon-btn { pointer-events: auto; width: 44px; height: 44px; display: grid; place-items: center; touch-action: none; cursor: pointer;
     border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 800 18px/1 var(--display); }
   .icon-btn[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; }
@@ -175,6 +177,7 @@
       <button class="icon-btn" id="soundBtn" type="button" aria-label="Âm thanh" aria-pressed="true">♪</button>
       <button class="icon-btn" id="pauseBtn" type="button" aria-label="Tạm dừng"><span class="pause-glyph"></span></button>
     </div>
+    <div id="fpsTxt"></div>
     <div class="bl" id="hpBox"><small>Máu</small><div class="hpnum" id="hpTxt">100</div><div class="bar"><i id="hpBar"></i></div></div>
     <div class="br" id="ammoBox"><small id="gunTxt">Các-bin</small><b><i id="ammoTxt" style="font-style:normal">30</i><span id="magTxt"> / 30</span></b></div>
     <div id="timer" hidden>0:00</div>
@@ -193,7 +196,7 @@
   <div class="overlay" id="menu">
     <div class="title">
       <h1>Hẻm<br>Mưa</h1>
-      <p>Nửa đêm, một con hẻm đang mưa. Đàn máy bay tuần tra bay vào từ trên mái. <strong>Giữ hẻm qua từng đợt.</strong></p>
+      <p>Nửa đêm, một con hẻm vừa tạnh mưa. Đàn máy bay tuần tra bay vào từ trên mái. <strong>Giữ hẻm qua từng đợt.</strong></p>
       <ul class="how">
         <li><b>Máy tính:</b> WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, phím 1 đến 5 hoặc lăn chuột để đổi súng, Shift chạy nhanh, Space nhảy.</li>
         <li><b>Điện thoại:</b> kéo nửa trái để chạy, kéo nửa phải để ngắm, giữ nút Bắn.</li>
@@ -313,11 +316,12 @@
   renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
   const QUAL = {
-    high: { post: true, ssao: true, refl: .5, shadow: 2048, maxPR: 1.5, rain: 2600 },
-    mid: { post: true, ssao: false, refl: .34, shadow: 1024, maxPR: 1, rain: 1500 },
-    low: { post: false, ssao: false, refl: 0, shadow: 1024, maxPR: 1, rain: 800 }
+    high: { post: true, ssao: true, refl: .5, shadow: 2048, sh2: true, shEvery: 1, maxPR: 1.5, neon: 99 },
+    mid: { post: true, ssao: false, refl: 0, shadow: 1024, sh2: false, shEvery: 2, maxPR: 1, neon: 4 },
+    low: { post: false, ssao: false, refl: 0, shadow: 0, sh2: false, shEvery: 0, maxPR: 1, neon: 2 }
   };
-  let qName = !hdrOK ? 'low' : coarse ? 'mid' : 'high', q = QUAL[qName], resScale = 1;
+  let qName = !hdrOK || coarse ? 'low' : 'mid', q = QUAL[qName], resScale = 1, autoQ = true, frameNo = 0;
+  const QNAME = { high: 'Cao', mid: 'Vừa', low: 'Thấp' }, NEON_PRI = [0, 4, 5, 3, 1, 2, 6];
   const scene = new T.Scene();
   scene.fog = new T.FogExp2(0x080c13, .028);
   const camera = new T.PerspectiveCamera(72, 1, .02, 260);
@@ -693,16 +697,11 @@
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nuniform mat4 uReflMat; varying vec4 vRefl; varying vec3 vWPos;')
       .replace('#include <project_vertex>', '#include <project_vertex>\nvec4 wp4 = modelMatrix * vec4(transformed, 1.0); vWPos = wp4.xyz; vRefl = uReflMat * wp4;');
     let f = sh.fragmentShader.replace('#include <common>', `#include <common>
-      uniform sampler2D tRefl; uniform sampler2D tPuddle; uniform float uTime; uniform float uReflOn; varying vec4 vRefl; varying vec3 vWPos;
-      vec2 h22(vec2 p){ vec3 a = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973)); a += dot(a, a.yzx + 33.33); return fract((a.xx + a.yz) * a.zy); }
-      vec2 rainRipple(vec2 p, float t){ vec2 c = floor(p), f = fract(p), n = vec2(0.0);
-        for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) { vec2 o = vec2(float(i), float(j)); vec2 h = h22(c + o); float tt = fract(t * 0.85 + h.x * 5.0 + h.y);
-          vec2 d = o + 0.15 + 0.7 * h - f; float l = length(d); float r = tt * 0.95; float w = sin((l - r) * 42.0) * smoothstep(0.09, 0.0, abs(l - r)) * (1.0 - tt) * (1.0 - tt); n += d / (l + 0.001) * w; }
-        return n; }`)
+      uniform sampler2D tRefl; uniform sampler2D tPuddle; uniform float uReflOn; varying vec4 vRefl; varying vec3 vWPos;`)
       .replace('#include <map_fragment>', '#include <map_fragment>\nfloat pud = smoothstep(0.47, 0.57, texture2D(tPuddle, vWPos.xz * 0.05).r); diffuseColor.rgb *= mix(1.0, 0.4, pud);')
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix(roughnessFactor * 0.55, 0.03, pud);')
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
-        vec2 rp = rainRipple(vWPos.xz * 2.4, uTime); vec3 pn = normalize((viewMatrix * vec4(rp.x * 0.3, 1.0, rp.y * 0.3, 0.0)).xyz); normal = normalize(mix(normal, pn, pud * 0.97));`);
+        vec3 pn = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz); normal = normalize(mix(normal, pn, pud * 0.97));`);
     if (gl2) f = f.replace('#include <tonemapping_fragment>', `if (uReflOn > 0.5) {
         float ndv = clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0); float fr = 0.03 + 0.97 * pow(1.0 - ndv, 5.0);
         vec3 wn = (vec4(normal, 0.0) * viewMatrix).xyz; vec2 ruv = vRefl.xy / vRefl.w + wn.xz * 0.05;
@@ -767,7 +766,7 @@
         gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0); }`,
     fragmentShader: 'varying vec3 vCol; void main(){ gl_FragColor = vec4(vCol, 1.0); }', blending: T.AdditiveBlending, depthWrite: false, transparent: true
   });
-  const rain = new T.LineSegments(rainGeo, rainMat); rain.frustumCulled = false; scene.add(rain);
+  const rain = new T.LineSegments(rainGeo, rainMat); rain.frustumCulled = false; // đã bỏ mưa: không đưa vào cảnh
 
   /* ================= hiệu ứng: tia lửa, khói, vệt đạn, lỗ đạn, vỏ đạn ================= */
   const PN = 420, pPos = new Float32Array(PN * 3), pCol = new Float32Array(PN * 3), pVel = new Float32Array(PN * 3), pLife = new Float32Array(PN), pMax = new Float32Array(PN), pBase = new Float32Array(PN * 3), pGrav = new Float32Array(PN);
@@ -1013,13 +1012,16 @@
     camera.aspect = W / H; baseFov = W < H ? 86 : 72; camera.fov = baseFov; camera.updateProjectionMatrix(); makeRTs();
   }
   let baseFov = 72;
-  function setQuality(name) {
+  function setQuality(name, auto) {
     if (name !== 'low' && !hdrOK) name = 'low';
-    qName = name; q = QUAL[name]; resScale = 1;
+    qName = name; q = QUAL[name]; resScale = 1; firstFrame = true; if (!auto) autoQ = false;
     document.querySelectorAll('.seg button[data-q]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.q === qName)));
-    lamp1.shadow.mapSize.set(q.shadow, q.shadow); if (lamp1.shadow.map) { lamp1.shadow.map.dispose(); lamp1.shadow.map = null; }
-    lamp2.castShadow = name !== 'low'; rainGeo.setDrawRange(0, q.rain * 2);
-    try { localStorage.setItem('hm-q', name); } catch (e) {}
+    lamp1.castShadow = q.shadow > 0; if (q.shadow) lamp1.shadow.mapSize.set(q.shadow, q.shadow); if (lamp1.shadow.map) { lamp1.shadow.map.dispose(); lamp1.shadow.map = null; }
+    lamp2.castShadow = q.sh2;
+    // ít đèn hơn ở mức thấp: mỗi đèn là một lần tính sáng cho mọi điểm ảnh
+    neonLights.forEach((n, i) => { n.l.visible = NEON_PRI.indexOf(i) < q.neon; }); lanLight.visible = q.neon > 2; lamp3.visible = name !== 'low'; fxLight.visible = name !== 'low';
+    hemi.intensity = name === 'low' ? .26 : name === 'mid' ? .12 : .09; // bớt đèn thì bù sáng nền để vẫn nhìn rõ
+    if (!auto) { try { localStorage.setItem('hm-q2', name); } catch (e) {} }
     resize();
   }
   const v1 = new T.Vector3(), v2 = new T.Vector3(), v3 = new T.Vector3(), v4 = new T.Vector3(), UP = new T.Vector3(0, 1, 0);
@@ -1030,12 +1032,14 @@
     v3.set(0, 1, 0).applyQuaternion(camera.quaternion); v3.y = -v3.y; mcam.up.copy(v3); mcam.lookAt(v2);
     mcam.projectionMatrix.copy(camera.projectionMatrix); mcam.projectionMatrixInverse.copy(camera.projectionMatrixInverse); mcam.updateMatrixWorld(true);
     FU.uReflMat.value.set(.5, 0, 0, .5, 0, .5, 0, .5, 0, 0, .5, .5, 0, 0, 0, 1).multiply(mcam.projectionMatrix).multiply(mcam.matrixWorldInverse);
-    const vv = vm.visible; floor.visible = false; vm.visible = false; rain.visible = false; caseI.visible = false;
-    renderer.shadowMap.autoUpdate = firstFrame; renderer.setRenderTarget(rtRefl); renderer.render(scene, mcam);
-    renderer.shadowMap.autoUpdate = true; floor.visible = true; vm.visible = vv; rain.visible = true; caseI.visible = true;
+    const vv = vm.visible; floor.visible = false; vm.visible = false; caseI.visible = false;
+    renderer.setRenderTarget(rtRefl); renderer.render(scene, mcam);
+    floor.visible = true; vm.visible = vv; caseI.visible = true;
   }
   function renderFrame() {
     camera.updateMatrixWorld(true);
+    // bóng đổ không cần vẽ lại mỗi khung hình: mức Vừa vẽ lại cách một khung
+    renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = firstFrame || (q.shEvery > 0 && frameNo++ % q.shEvery === 0);
     if (!q.post) { renderer.toneMapping = T.ACESFilmicToneMapping; renderer.setRenderTarget(null); renderer.render(scene, camera); firstFrame = false; return; }
     renderer.toneMapping = T.NoToneMapping;
     if (rtRefl) renderReflection();
@@ -1106,7 +1110,7 @@
       conv = ac.createConvolver(); conv.buffer = ir; const wet = ac.createGain(); wet.gain.value = .5; conv.connect(wet).connect(master);
       noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate); const nd = noiseBuf.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
       const loop = (type, f, g) => { const s = ac.createBufferSource(), fl = ac.createBiquadFilter(), gn = ac.createGain(); s.buffer = noiseBuf; s.loop = true; fl.type = type; fl.frequency.value = f; gn.gain.value = g; s.connect(fl).connect(gn).connect(master); s.start(); };
-      loop('highpass', 2200, .035); loop('bandpass', 700, .05); loop('lowpass', 180, .1);
+      loop('lowpass', 160, .05);
       humGain = ac.createGain(); humGain.gain.value = 0; const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 620; lp.connect(humGain).connect(master);
       for (const f of [96, 143.5, 191]) { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(lp); o.start(); }
     } catch (e) { ac = null; }
@@ -1394,7 +1398,6 @@
     for (const n of neonLights) n.l.intensity = n.base * (.93 + Math.sin(time * 37 + n.ph) * .04 + (Math.sin(time * 2.3 + n.ph) > .985 ? -.6 : 0));
     lamp1.intensity = 2.4 * (.97 + Math.sin(time * 50) * .02); tvT -= dt; if (tvT <= 0) { tvT = rnd(.08, .5); const v = rnd(.5, 1.4); M.win[2].color.setRGB(v, v, v * 1.1); }
     // sấm chớp
-    boltT -= dt; if (boltT <= 0) { boltT = rnd(14, 30); boltK = 1; setTimeout(sfx.thunder, rnd(500, 1800)); }
     if (boltK > 0) { boltK -= dt * 2.2; const fl = boltK > 0 ? (Math.sin(boltK * 40) > -.2 ? 1 : .25) * boltK : 0; bolt.intensity = fl * 2.2; skyMat.color.setScalar(.7 + fl * 14); hemi.intensity = .09 + fl * 1.2; rainMat.uniforms.uFlash.value = fl * .35; }
     hitT -= dt; hurtT = Math.max(0, hurtT - dt); dmgT = Math.max(0, dmgT - dt * .9);
     if (bannerTimer > 0) { bannerTimer -= dt; if (bannerTimer <= 0) $('banner').classList.remove('on'); }
@@ -1663,13 +1666,16 @@
   setInterval(() => { if (state === 'lobby') net({ t: 'rooms' }); }, 2500);
 
   /* ================= vòng lặp, tự chỉnh độ phân giải ================= */
-  let last = performance.now(), fAcc = 0, fN = 0, cool = 0, lowRuns = 0;
+  let last = performance.now(), fAcc = 0, fN = 0, cool = 0, slow = 0;
   function adapt(dt) {
     fAcc += dt; fN++; if (fAcc < 1) return; const fps = fN / fAcc; fAcc = 0; fN = 0; cool -= 1;
+    setTxt('fpsTxt', Math.round(fps) + ' khung/giây · ' + QNAME[qName] + (resScale < 1 ? ' · nét ' + Math.round(resScale * 100) + '%' : ''));
     if (state !== 'play' && state !== 'menu') return;
-    if (fps < 42 && resScale > .56) { resScale = Math.max(.55, resScale - (fps < 26 ? .15 : .08)); cool = 6; resize(); }
-    else if (fps > 57 && resScale < 1 && cool <= 0) { resScale = Math.min(1, resScale + .05); cool = 4; resize(); }
-    if (fps < 22 && resScale <= .56) { if (++lowRuns >= 3 && qName !== 'low') { lowRuns = 0; setQuality(qName === 'high' ? 'mid' : 'low'); if (state === 'play') banner('Giảm đồ họa', 'để giữ khung hình mượt'); } } else lowRuns = 0;
+    if (fps < 45) {
+      slow++;
+      if (resScale > .62) { resScale = Math.max(.6, resScale - (fps < 30 ? .2 : .1)); cool = 8; slow = 0; resize(); }
+      else if (slow >= 2 && autoQ && qName !== 'low') { slow = 0; setQuality(qName === 'high' ? 'mid' : 'low', true); if (state === 'play') banner('Giảm đồ họa', 'để giữ khung hình mượt'); }
+    } else { slow = 0; if (fps > 57 && resScale < 1 && cool <= 0) { resScale = Math.min(1, resScale + .1); cool = 6; resize(); } }
   }
   function frame(now) {
     const raw = (now - last) / 1000, dt = Math.min(.1, raw); last = now;
@@ -1693,7 +1699,7 @@
   function setJoy(t) { const R = 52, dx = t.x - t.ox, dy = t.y - t.oy, l = Math.hypot(dx, dy) || 1, k = Math.min(1, R / l); joyX = dx * k / R; joyY = dy * k / R; $('knob').style.transform = `translate(${dx * k}px, ${dy * k}px)`; }
   view.addEventListener('pointerdown', e => {
     if (state !== 'play') return;
-    if (e.pointerType === 'mouse') { if (e.button === 0) firing = true; if (e.button === 2) ads = true; if (!locked && !dragLook) lock(); return; }
+    if (e.pointerType === 'mouse') return; // nút chuột nghe ở mousedown bên dưới: pointerdown không báo nút thứ hai khi đang giữ nút đầu
     const r = stage.getBoundingClientRect(), x = e.clientX, y = e.clientY, kind = moveId === null && x - r.left < r.width * .45 ? 'move' : 'look';
     touches.set(e.pointerId, { kind, ox: x, oy: y, x, y }); try { view.setPointerCapture(e.pointerId); } catch (err) {}
     if (kind === 'move') { moveId = e.pointerId; const j = $('joy'); j.hidden = false; j.style.left = (x - r.left) + 'px'; j.style.top = (y - r.top) + 'px'; $('knob').style.transform = ''; }
@@ -1705,10 +1711,15 @@
     const t = touches.get(e.pointerId); if (!t) return; if (t.kind === 'look') look(e.clientX - t.x, e.clientY - t.y, SENS_T); t.x = e.clientX; t.y = e.clientY; if (t.kind === 'move') setJoy(t);
   });
   const endTouch = e => {
-    if (e.pointerType === 'mouse') { if (e.button === 0) firing = false; if (e.button === 2) ads = false; return; }
+    if (e.pointerType === 'mouse') return;
     const t = touches.get(e.pointerId); if (!t) return; touches.delete(e.pointerId); if (t.kind === 'move') { moveId = null; joyX = joyY = 0; $('joy').hidden = true; }
   };
   view.addEventListener('pointerup', endTouch); view.addEventListener('pointercancel', endTouch);
+  view.addEventListener('mousedown', e => {
+    if (state !== 'play' || lastPT === 'touch' || lastPT === 'pen') return;
+    if (e.button === 0) firing = true; else if (e.button === 2) ads = true;
+    if (!locked && !dragLook) lock(); e.preventDefault();
+  });
   addEventListener('mouseup', e => { if (e.button === 0) firing = false; if (e.button === 2) ads = false; });
   view.addEventListener('contextmenu', e => e.preventDefault());
   const fb = $('fireBtn');
@@ -1749,8 +1760,8 @@
   if (window.ResizeObserver) new ResizeObserver(resize).observe(stage); else addEventListener('resize', resize);
 
   /* ================= khởi động ================= */
-  try { const s = localStorage.getItem('hm-q'); if (s && QUAL[s]) qName = s; } catch (e) {}
-  setQuality(qName);
+  let savedQ = null; try { const sq = localStorage.getItem('hm-q2'); if (sq && QUAL[sq]) savedQ = sq; } catch (e) {}
+  setQuality(savedQ || qName, !savedQ);
   function decor() { wave = 1; for (let i = 0; i < 4; i++) spawn(i === 3 ? 'heavy' : 'scout', { a: i * 1.7, r: 1.6 + (i % 2) * .8, y: 3.4 + i * .7, z: -4 - i * 3, w: (i % 2 ? -1 : 1) * (.22 + i * .04) }); }
   decor();
   progress(.95); await tick();

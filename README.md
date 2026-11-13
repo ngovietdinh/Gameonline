@@ -91,10 +91,26 @@ Chọn bản đồ ở màn hình đầu (chơi đơn) hoặc lúc tạo phòng 
 
 Đường đạn hiện thành vệt sáng bay từ nòng tới điểm chạm, kèm một vệt khói mờ. Đạn của mình màu vàng, đạn của người khác màu đỏ cam.
 
+## Đối chiếu bảng yêu cầu đồ họa
+
+Số đo lấy trên bản đồ Hẻm, mức đồ họa Vừa, bằng bộ đo trong game (bấm **F3** để hiện số lượt vẽ và số tam giác cạnh số khung hình).
+
+| Hạng mục | Yêu cầu | Hiện trạng |
+|---|---|---|
+| 1. Phong cách | Low-poly hoặc stylized, hạn chế PBR nặng | Mức Thấp và Vừa (mặc định) dùng chất liệu nhẹ không PBR. PBR chỉ còn ở mức Cao cho máy mạnh |
+| 2. Đa giác | Nhân vật 3.000–6.000, vũ khí 4.000–8.000, vật thể 100–1.500 | Lính 3.980 tam giác. Súng 444–1.344 (chưa tính tay), dưới mức trần. Máy bay 2.382. Cả cảnh khoảng 87.000 |
+| 3. Texture | Atlas, tối đa 2048 và 1024, nén WebP hoặc KTX2 | Mọi texture sinh bằng mã lúc tải, cỡ 256–512, không tải file ảnh nào. Khối tĩnh gộp theo chất liệu thay cho atlas. Chưa đạt: còn khoảng 340 lượt vẽ, phần lớn do súng và dây điện chưa gộp |
+| 4. Hiệu ứng hạt | Ít hạt, sprite 2D, có giới hạn | Tối đa 420 hạt và 46 sprite khói dùng lại. Mức Vừa giảm 25% số hạt, mức Thấp giảm 50% |
+| 5. Ánh sáng | Lightmap nướng sẵn, bóng đơn giản | Mức Thấp và Vừa nướng ánh sáng vào màu đỉnh lúc dựng bản đồ (8–47 ms), có bóng khuất do nhà và vật cản. Nhân vật dùng bóng tròn dưới chân. Hạn chế: chớp lửa đầu nòng và vụ nổ không rọi sáng tường ở hai mức này |
+| 6. Giao diện | Phẳng, tối giản, có tâm ngắm, máu, đạn, bản đồ nhỏ | Có đủ, kể cả bản đồ nhỏ: đồng đội luôn hiện, đối thủ chỉ hiện chốc lát sau khi nổ súng. Không dùng blur |
+| 7. Hiệu năng | 60 khung hình/giây trên máy tầm trung, tải dưới 5–10 giây | Tải 2,2–2,6 giây khi chạy tại chỗ; gói tải về khoảng 215 KB đã nén. Tự giảm độ nét và mức đồ họa khi dưới 45 khung hình/giây. Chưa đo được số khung hình trên máy thật |
+
+Ghi chú về quy trình: game không dùng file mô hình ngoài, mọi hình khối dựng bằng mã, nên chưa cần xuất `.glb` hay nén Draco. Nếu sau này thêm mô hình từ phần mềm 3D thì dùng `.glb` có nén Draco như bảng yêu cầu.
+
 ## Nếu bị giật
 
 - Góc trên phải hiện số khung hình mỗi giây và mức đồ họa đang chạy.
-- Game tự giảm độ nét rồi tự hạ mức đồ họa khi dưới 45 khung hình mỗi giây. Muốn chọn tay thì đổi **Đồ họa** ở màn hình đầu hoặc lúc tạm dừng: Thấp nhẹ nhất (không bóng đổ, ít đèn, không hậu kỳ), Vừa là mặc định, Cao đẹp nhất nhưng nặng.
+- Game tự giảm độ nét rồi tự hạ mức đồ họa khi dưới 45 khung hình mỗi giây. Muốn chọn tay thì đổi **Đồ họa** ở màn hình đầu hoặc lúc tạm dừng: Thấp nhẹ nhất (ánh sáng nướng sẵn, không hậu kỳ), Vừa là mặc định (ánh sáng nướng sẵn, có quầng sáng), Cao đẹp nhất nhưng nặng (PBR, bóng đổ thật, phản chiếu mặt đường).
 - Đóng bớt thẻ trình duyệt khác và bật tăng tốc phần cứng trong cài đặt trình duyệt.
 
 ## Điều khiển

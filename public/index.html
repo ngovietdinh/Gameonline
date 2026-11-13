@@ -54,7 +54,9 @@
   .tl span { font-size: 13px; color: var(--muted); }
   .tr { position: absolute; top: 10px; right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 8px; }
   #stage.touch #fpsTxt { display: none; }
-  #fpsTxt { position: absolute; top: 60px; right: max(16px, env(safe-area-inset-right, 0px)); font-size: 11px; color: var(--muted); text-shadow: 0 1px 3px #000; }
+  #mini { position: absolute; top: 62px; right: max(16px, env(safe-area-inset-right, 0px)); width: 132px; height: 132px; border-radius: 3px; }
+  #stage.touch #mini { top: 116px; width: 92px; height: 92px; }
+  #fpsTxt { position: absolute; top: 200px; right: max(16px, env(safe-area-inset-right, 0px)); font-size: 11px; color: var(--muted); text-shadow: 0 1px 3px #000; }
   .icon-btn { pointer-events: auto; width: 44px; height: 44px; display: grid; place-items: center; touch-action: none; cursor: pointer;
     border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 800 18px/1 var(--display); }
   .icon-btn[aria-pressed="false"] { color: var(--muted); text-decoration: line-through; }
@@ -200,6 +202,7 @@
       <button class="icon-btn" id="scoreBtn" type="button" aria-label="Bảng thành tích">≡</button>
       <button class="icon-btn" id="pauseBtn" type="button" aria-label="Tạm dừng"><span class="pause-glyph"></span></button>
     </div>
+    <canvas id="mini" width="264" height="264" aria-label="Bản đồ nhỏ"></canvas>
     <div id="fpsTxt"></div>
     <div class="bl" id="hpBox"><small>Máu</small><div class="hpnum" id="hpTxt">100</div><div class="bar"><i id="hpBar"></i></div></div>
     <div class="br" id="ammoBox"><small id="gunTxt">Các-bin</small><b><i id="ammoTxt" style="font-style:normal">30</i><span id="magTxt"> / 30</span></b></div>
@@ -346,11 +349,12 @@
   renderer.toneMappingExposure = 1.05;
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = T.PCFSoftShadowMap;
   const QUAL = {
-    high: { post: true, ssao: true, refl: .5, shadow: 2048, sh2: true, shEvery: 1, maxPR: 1.5, neon: 99 },
-    mid: { post: true, ssao: false, refl: 0, shadow: 1024, sh2: false, shEvery: 2, maxPR: 1, neon: 4 },
-    low: { post: false, ssao: false, refl: 0, shadow: 0, sh2: false, shEvery: 0, maxPR: 1, neon: 2 }
+    high: { post: true, ssao: true, refl: .5, shadow: 2048, sh2: true, shEvery: 1, maxPR: 1.5, neon: 99, bake: false, fx: 1 },
+    mid: { post: true, ssao: false, refl: 0, shadow: 0, sh2: false, shEvery: 0, maxPR: 1, neon: 99, bake: true, fx: .75 },
+    low: { post: false, ssao: false, refl: 0, shadow: 0, sh2: false, shEvery: 0, maxPR: 1, neon: 99, bake: true, fx: .5 }
   };
   let qName = !hdrOK || coarse ? 'low' : 'mid', q = QUAL[qName], resScale = 1, autoQ = true, frameNo = 0;
+  let bakeOn = !!q.bake, dbgOn = false, bakeMs = 0; const CELL = 2.6; // ô chia lưới cho ánh sáng nướng theo đỉnh
   const QNAME = { high: 'Cao', mid: 'Vừa', low: 'Thấp' }, NEON_PRI = [0, 4, 5, 3, 1, 2, 6];
   const scene = new T.Scene();
   scene.fog = new T.FogExp2(0x080c13, .028);
@@ -541,15 +545,18 @@
   class Batch {
     constructor(mat, tile, opt) { this.mat = mat; this.tile = tile || 2; this.opt = opt || {}; this.p = []; this.n = []; this.u = []; this.i = []; }
     box(w, h, d, x, y, z, ry) {
-      const c = ry ? Math.cos(ry) : 1, s = ry ? Math.sin(ry) : 0, hs = [w / 2, h / 2, d / 2], ctr = [x, y, z], t = this.tile;
+      const c = ry ? Math.cos(ry) : 1, s = ry ? Math.sin(ry) : 0, hs = [w / 2, h / 2, d / 2], ctr = [x, y, z], t = this.tile, fit = this.opt.fit;
       for (const f of CORN) {
-        const base = this.p.length / 3, nx = f[0][0], ny = f[0][1], nz = f[0][2];
-        for (let k = 0; k < 4; k++) {
-          const cr = f[1][k], lx = cr[0] * hs[0], ly = cr[1] * hs[1], lz = cr[2] * hs[2], l = [lx, ly, lz];
-          this.p.push(x + lx * c + lz * s, y + ly, z - lx * s + lz * c); this.n.push(nx * c + nz * s, ny, -nx * s + nz * c);
-          if (this.opt.fit) this.u.push(FIT[k][0], FIT[k][1]); else this.u.push((l[f[2]] + ctr[f[2]]) / t, (l[f[3]] + ctr[f[3]]) / t);
+        const nx = f[0][0], ny = f[0][1], nz = f[0][2], q0 = f[1][0], q1 = f[1][1], q3 = f[1][3];
+        const ax = q0[0] * hs[0], ay = q0[1] * hs[1], az = q0[2] * hs[2], ux = (q1[0] - q0[0]) * hs[0], uy = (q1[1] - q0[1]) * hs[1], uz = (q1[2] - q0[2]) * hs[2], vx = (q3[0] - q0[0]) * hs[0], vy = (q3[1] - q0[1]) * hs[1], vz = (q3[2] - q0[2]) * hs[2];
+        // khi nướng sáng, mặt lớn được chia lưới để ánh sáng theo đỉnh đủ mịn
+        const nu = bakeOn ? Math.max(1, Math.ceil(Math.hypot(ux, uy, uz) / CELL)) : 1, nv = bakeOn ? Math.max(1, Math.ceil(Math.hypot(vx, vy, vz) / CELL)) : 1, base = this.p.length / 3;
+        for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) {
+          const a = i / nu, b = j / nv, l = [ax + ux * a + vx * b, ay + uy * a + vy * b, az + uz * a + vz * b];
+          this.p.push(x + l[0] * c + l[2] * s, y + l[1], z - l[0] * s + l[2] * c); this.n.push(nx * c + nz * s, ny, -nx * s + nz * c);
+          if (fit) this.u.push(a, b); else this.u.push((l[f[2]] + ctr[f[2]]) / t, (l[f[3]] + ctr[f[3]]) / t);
         }
-        this.i.push(base, base + 1, base + 2, base, base + 2, base + 3);
+        for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) { const a0 = base + j * (nu + 1) + i; this.i.push(a0, a0 + 1, a0 + nu + 2, a0, a0 + nu + 2, a0 + nu + 1); }
       }
       return this;
     }
@@ -558,12 +565,25 @@
       const g = new T.BufferGeometry();
       g.setAttribute('position', new T.Float32BufferAttribute(this.p, 3)); g.setAttribute('normal', new T.Float32BufferAttribute(this.n, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(this.u, 2));
       g.setIndex(this.i); g.computeBoundingSphere(); g.computeBoundingBox();
+      if (bakeOn && this.mat.vertexColors) g.setAttribute('color', new T.BufferAttribute(bakeColors(this.p, this.n), 3));
       const m = new T.Mesh(g, this.mat); m.castShadow = this.opt.cast !== false; m.receiveShadow = this.opt.recv !== false;
       mapRoot.add(m); if (this.opt.solid !== false) statics.push(m); return m;
     }
   }
   let B = {};
-  const nb = (name, mat, tile, opt) => (B[name] = new Batch(mat, tile, opt));
+  // chất liệu nhẹ cho chế độ nướng sáng: khối tĩnh dùng màu đỉnh có sẵn ánh sáng, vật khác dùng Lambert tính sáng theo đỉnh
+  function twinB(mat) { if (!mat || !mat.isMeshStandardMaterial) return mat; return mat.userData.tb || (mat.userData.tb = new T.MeshBasicMaterial({ map: mat.map, color: mat.color, vertexColors: true, side: mat.side })); }
+  function twin(mat) {
+    if (!mat || !mat.isMeshStandardMaterial) return mat;
+    return mat.userData.tw || (mat.userData.tw = new T.MeshLambertMaterial({ map: mat.map, color: mat.color.clone().multiplyScalar(1 - .75 * (mat.metalness || 0)), emissive: mat.emissive, emissiveMap: mat.emissiveMap, emissiveIntensity: mat.emissiveIntensity, transparent: mat.transparent, opacity: mat.opacity, side: mat.side }));
+  }
+  function skin(root) { // đổi chất liệu của một nhóm vật thể theo chế độ đang chạy, đổi qua lại được
+    root.traverse(o => {
+      if (!o.isMesh || !o.material) return; const om = o.userData.om || (o.userData.om = o.material);
+      o.material = !bakeOn ? om : Array.isArray(om) ? om.map(twin) : twin(om);
+    });
+  }
+  const nb = (name, mat, tile, opt) => (B[name] = new Batch(bakeOn ? twinB(mat) : mat, tile, opt));
   function resetBatches() {
     B = {};
     nb('plasterA', M.plasterA, 4.2); nb('plasterB', M.plasterB, 4.2); nb('plasterC', M.plasterC, 4.2); nb('plasterD', M.plasterD, 4.2);
@@ -605,6 +625,9 @@
     sh.fragmentShader = f;
   };
   const floor = new T.Mesh(new T.PlaneGeometry(162, 162), floorMat); floor.rotation.x = -PI / 2; floor.receiveShadow = true; scene.add(floor);
+  // mặt đường cho chế độ nướng sáng: lưới 2,6 m, ánh sáng nằm sẵn trong màu đỉnh
+  const floorBG = new T.PlaneGeometry(162, 162, 62, 62); floorBG.rotateX(-PI / 2); floorBG.setAttribute('color', new T.BufferAttribute(new Float32Array(floorBG.attributes.position.count * 3), 3));
+  const floorB = new T.Mesh(floorBG, new T.MeshBasicMaterial({ map: TX.asphalt.map, color: 0x9aa0a8, vertexColors: true })); floorB.visible = false; scene.add(floorB);
 
   /* ---------- bầu trời và dàn đèn dùng chung: mỗi bản đồ chỉ đặt lại vị trí, màu, độ sáng ---------- */
   const skyC = mkCanvas(512, 256), skyG = skyC.getContext('2d'), sgr = skyG.createLinearGradient(0, 0, 0, 256);
@@ -623,15 +646,50 @@
   const lamp3 = new T.PointLight(0xffb060, 0, 16, 1.8), lanLight = new T.PointLight(0xff5a28, 0, 14, 1.6); scene.add(lamp3, lanLight);
   const neonLights = []; for (let i = 0; i < 8; i++) { const l = new T.PointLight(0xffffff, 0, 10, 2); scene.add(l); neonLights.push({ l, base: 0, ph: i * 1.7 }); }
   let neonN = 0, lampBase = 2.4, neonPri = null, MAP = null, mapIdx = -1, lanterns = [];
-  function neon(color, p, int, dist) { if (neonN >= neonLights.length) return; const n = neonLights[neonN++]; n.l.color.set(color); n.l.position.copy(p); n.base = int || 1.5; n.l.intensity = n.base; n.l.distance = dist || 10; }
-  function setSpot(l, x, y, z, tx, tz, color, int, angle) { l.position.set(x, y, z); l.target.position.set(tx, 0, tz); l.target.updateMatrixWorld(); l.color.set(color); l.intensity = int; l.angle = angle; }
-  function setPoint(l, x, y, z, color, int, dist) { l.position.set(x, y, z); l.color.set(color); l.intensity = int; l.distance = dist; }
+  const bakeL = [], tmpC = new T.Color();
+  function bakeAdd(x, y, z, color, int, dist, decay, occ, spot) { tmpC.set(color); bakeL.push({ x, y, z, r: tmpC.r * int, g: tmpC.g * int, b: tmpC.b * int, dist, decay, occ, spot: spot || null }); }
+  function neon(color, p, int, dist) { bakeAdd(p.x, p.y, p.z, color, int || 1.5, dist || 10, 2, true); if (neonN >= neonLights.length) return; const n = neonLights[neonN++]; n.l.color.set(color); n.l.position.copy(p); n.base = int || 1.5; n.l.intensity = n.base; n.l.distance = dist || 10; }
+  function setSpot(l, x, y, z, tx, tz, color, int, angle) {
+    const dl = Math.hypot(tx - x, y, tz - z) || 1; bakeAdd(x, y, z, color, int, 38, 1.3, true, { dx: (tx - x) / dl, dy: -y / dl, dz: (tz - z) / dl, cosO: Math.cos(angle), cosI: Math.cos(angle * .35) });
+    l.position.set(x, y, z); l.target.position.set(tx, 0, tz); l.target.updateMatrixWorld(); l.color.set(color); l.intensity = int; l.angle = angle;
+  }
+  function setPoint(l, x, y, z, color, int, dist) { bakeAdd(x, y, z, color, int, dist, l.decay, true); l.position.set(x, y, z); l.color.set(color); l.intensity = int; l.distance = dist; }
   function applyLights() {
     lamp1.castShadow = q.shadow > 0; lamp2.castShadow = q.sh2; lamp2.visible = lamp2.intensity > 0;
     // ít đèn hơn ở mức thấp: mỗi đèn là một lần tính sáng cho mọi điểm ảnh
     neonLights.forEach((n, i) => { const pr = neonPri ? neonPri.indexOf(i) : i; n.l.visible = n.base > 0 && pr >= 0 && pr < q.neon; });
     lanLight.visible = q.neon > 2 && lanLight.intensity > 0; lamp3.visible = qName !== 'low' && lamp3.intensity > 0;
-    hemi.intensity = (qName === 'low' ? .3 : qName === 'mid' ? .13 : .09) * (MAP && MAP.amb || 1); // bớt đèn thì bù sáng nền để vẫn nhìn rõ
+    hemi.intensity = (bakeOn ? HEMI_BAKE : .09) * (MAP && MAP.amb || 1);
+  }
+  /* ---------- nướng ánh sáng: tính một lần lúc dựng bản đồ, lưu vào màu đỉnh ---------- */
+  const HEMI_BAKE = .2;
+  function blocked(ax, ay, az, bx, by, bz) { // đoạn thẳng từ điểm tới đèn có bị khối nào chắn không
+    const dx = bx - ax, dy = by - ay, dz = bz - az;
+    for (let k = 0; k < boxes.length; k++) {
+      const b = boxes[k]; let t0 = 0, t1 = 1, u0, u1, sw;
+      if (Math.abs(dx) < 1e-9) { if (ax < b.x0 || ax > b.x1) continue; } else { u0 = (b.x0 - ax) / dx; u1 = (b.x1 - ax) / dx; if (u0 > u1) { sw = u0; u0 = u1; u1 = sw; } if (u0 > t0) t0 = u0; if (u1 < t1) t1 = u1; if (t0 > t1) continue; }
+      if (Math.abs(dz) < 1e-9) { if (az < b.z0 || az > b.z1) continue; } else { u0 = (b.z0 - az) / dz; u1 = (b.z1 - az) / dz; if (u0 > u1) { sw = u0; u0 = u1; u1 = sw; } if (u0 > t0) t0 = u0; if (u1 < t1) t1 = u1; if (t0 > t1) continue; }
+      if (Math.abs(dy) < 1e-9) { if (ay < 0 || ay > b.h) continue; } else { u0 = -ay / dy; u1 = (b.h - ay) / dy; if (u0 > u1) { sw = u0; u0 = u1; u1 = sw; } if (u0 > t0) t0 = u0; if (u1 < t1) t1 = u1; if (t0 > t1) continue; }
+      return true;
+    }
+    return false;
+  }
+  function bakeColors(pos, nor) {
+    const t0 = performance.now(), n = pos.length / 3, out = new Float32Array(n * 3), amb = HEMI_BAKE * (MAP.amb || 1), sk = hemi.color, gr = hemi.groundColor;
+    for (let i = 0; i < n; i++) {
+      const k = i * 3, nx = nor[k], ny = nor[k + 1], nz = nor[k + 2], ox = pos[k] + nx * .07, oy = pos[k + 1] + ny * .07, oz = pos[k + 2] + nz * .07, w = ny * .5 + .5;
+      let r = (gr.r + (sk.r - gr.r) * w) * amb, g = (gr.g + (sk.g - gr.g) * w) * amb, b = (gr.b + (sk.b - gr.b) * w) * amb;
+      for (let j = 0; j < bakeL.length; j++) {
+        const L = bakeL[j]; let lx = L.x - ox, ly = L.y - oy, lz = L.z - oz; const d = Math.sqrt(lx * lx + ly * ly + lz * lz); if (d >= L.dist || d < 1e-4) continue;
+        lx /= d; ly /= d; lz /= d; const ndl = nx * lx + ny * ly + nz * lz; if (ndl <= 0) continue;
+        let att = Math.pow(1 - d / L.dist, L.decay) * ndl;
+        if (L.spot) { const cs = -(lx * L.spot.dx + ly * L.spot.dy + lz * L.spot.dz); if (cs <= L.spot.cosO) continue; att *= smooth(L.spot.cosO, L.spot.cosI, cs); }
+        if (att < .004 || (L.occ && blocked(ox, oy, oz, L.x, L.y, L.z))) continue;
+        r += L.r * att; g += L.g * att; b += L.b * att;
+      }
+      out[k] = r; out[k + 1] = g; out[k + 2] = b;
+    }
+    bakeMs += performance.now() - t0; return out;
   }
   const coneVS = 'varying vec3 vN; varying vec3 vV; varying float vH; uniform float uLen; void main(){ vec4 mv = modelViewMatrix * vec4(position, 1.0); vV = -mv.xyz; vN = normalMatrix * normal; vH = clamp(length(position) / uLen, 0.0, 1.0); gl_Position = projectionMatrix * mv; }';
   const coneFS = 'varying vec3 vN; varying vec3 vV; varying float vH; uniform vec3 uColor; uniform float uInt; void main(){ float e = abs(dot(normalize(vN), normalize(vV))); float a = pow(e, 2.4) * (1.0 - vH) * (1.0 - vH) * uInt; gl_FragColor = vec4(uColor * a, 1.0); }';
@@ -926,15 +984,19 @@
       spawns: [[-23, -17], [23, -17], [-23, 17], [23, 17], [10, 2], [-11, -9], [-11, 9], [21, -2]],
       fly(t) { const a = t * .05 + 2.2; camera.position.set(4 + Math.cos(a) * 19, 7 + Math.sin(t * .13) * .6, Math.sin(a) * 16); camera.lookAt(-2, 2.5, 0); } }
   ];
-  function loadMap(i) {
-    i = clamp(i | 0, 0, MAPS.length - 1); if (i === mapIdx) return;
+  function loadMap(i, force) {
+    i = clamp(i | 0, 0, MAPS.length - 1); if (i === mapIdx && !force) return;
     for (const o of trash) o.dispose(); trash.length = 0;
     mapRoot.traverse(o => { if (o.geometry && !o.geometry.userData.keep) o.geometry.dispose(); });
     scene.remove(mapRoot); mapRoot = new T.Group(); scene.add(mapRoot);
     statics.length = 0; boxes.length = 0; cyls.length = 0; lanterns = []; neonN = 0; neonLights.forEach(n => { n.base = 0; n.l.intensity = 0; });
-    lamp2.intensity = 0; lamp3.intensity = 0; lanLight.intensity = 0;
+    lamp2.intensity = 0; lamp3.intensity = 0; lanLight.intensity = 0; bakeL.length = 0; bakeMs = 0;
     mapIdx = i; MAP = MAPS[i]; sd = MAP.seed; neonPri = MAP.neonPri || null;
-    resetBatches(); MAP.build(); for (const k in B) B[k].build(); finishLanterns(); statics.push(floor);
+    resetBatches(); MAP.build();
+    for (let k = 0; k < lanterns.length; k += 2) bakeAdd(lanterns[k][0], lanterns[k][1], lanterns[k][2], 0xff5a20, .6, 4.6, 2, false); // đèn lồng hắt sáng ấm quanh nó
+    for (const k in B) B[k].build(); finishLanterns();
+    if (bakeOn) { floorBG.attributes.color.array.set(bakeColors(floorBG.attributes.position.array, floorBG.attributes.normal.array)); floorBG.attributes.color.needsUpdate = true; skin(mapRoot); }
+    floor.visible = !bakeOn; floorB.visible = bakeOn; statics.push(bakeOn ? floorB : floor);
     lampBase = lamp1.intensity; applyLights(); mapChanged();
   }
 
@@ -973,6 +1035,7 @@
   points.frustumCulled = false; scene.add(points);
   let pi = 0;
   function puff(x, y, z, n, col, sp, up, life, grav) {
+    n = Math.max(1, Math.round(n * (q.fx || 1))); // mức đồ họa thấp thì ít hạt hơn
     for (let k = 0; k < n; k++) {
       const i = pi; pi = (pi + 1) % PN; const a = rnd(0, TAU), e = rnd(-1, 1), s = Math.sqrt(1 - e * e), v = rnd(.25, 1) * sp;
       pPos[i * 3] = x; pPos[i * 3 + 1] = y; pPos[i * 3 + 2] = z; pVel[i * 3] = Math.cos(a) * s * v; pVel[i * 3 + 1] = e * v + (up || 0); pVel[i * 3 + 2] = Math.sin(a) * s * v;
@@ -1144,6 +1207,7 @@
   const flash = gp(gun, new T.PlaneGeometry(.3, .3), flashMat, 0, .002, -.78); flash.visible = false;
   const flashLight = new T.PointLight(0xffb060, 0, 15, 1.6); scene.add(flashLight);
   gun.traverse(o => { o.frustumCulled = false; });
+  const triCount = root => { let n = 0; root.traverse(o => { if (o.isMesh && o.geometry) n += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; }); return Math.round(n); };
   progress(.82); await tick();
 
   /* ================= máy bay tuần tra ================= */
@@ -1254,6 +1318,7 @@
   function setQuality(name, auto) {
     if (name !== 'low' && !hdrOK) name = 'low';
     qName = name; q = QUAL[name]; resScale = 1; firstFrame = true; if (!auto) autoQ = false;
+    const was = bakeOn; bakeOn = !!q.bake; if (was !== bakeOn && mapIdx >= 0) { loadMap(mapIdx, true); skinAll(); }
     document.querySelectorAll('.seg button[data-q]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.q === qName)));
     if (q.shadow) lamp1.shadow.mapSize.set(q.shadow, q.shadow); if (lamp1.shadow.map) { lamp1.shadow.map.dispose(); lamp1.shadow.map = null; }
     fxLight.visible = name !== 'low'; applyLights();
@@ -1276,7 +1341,7 @@
     camera.updateMatrixWorld(true);
     // bóng đổ không cần vẽ lại mỗi khung hình: mức Vừa vẽ lại cách một khung
     renderer.shadowMap.autoUpdate = false; renderer.shadowMap.needsUpdate = firstFrame || (q.shEvery > 0 && frameNo++ % q.shEvery === 0);
-    if (!q.post) { renderer.toneMapping = T.ACESFilmicToneMapping; renderer.setRenderTarget(null); renderer.render(scene, camera); firstFrame = false; return; }
+    if (!q.post) { renderer.toneMapping = T.ACESFilmicToneMapping; renderer.toneMappingExposure = bakeOn ? 1.4 : 1.05; renderer.setRenderTarget(null); renderer.render(scene, camera); firstFrame = false; return; }
     renderer.toneMapping = T.NoToneMapping;
     if (rtRefl) renderReflection();
     renderer.setRenderTarget(rtScene); renderer.render(scene, camera); firstFrame = false;
@@ -1385,7 +1450,30 @@
   let bannerTimer = 0;
   function banner(txt, sub) { const b = $('banner'); b.textContent = txt; if (sub) { const s = document.createElement('small'); s.textContent = sub; b.append(s); } b.classList.add('on'); bannerTimer = 2.6; }
   const cache = {}; const setTxt = (id, v) => { if (cache[id] !== v) { cache[id] = v; $(id).textContent = v; } };
+  /* ---------- bản đồ nhỏ: nền vẽ một lần mỗi bản đồ, chấm vị trí cập nhật 12 lần mỗi giây ---------- */
+  const mini = $('mini'), mctx = mini.getContext('2d'), miniBg = mkCanvas(264, 264); let miniT = 0, miniS = 1, miniOx = 0, miniOy = 0;
+  function miniBuild() {
+    const g = miniBg.getContext('2d'), b = MAP.bounds, pad = 8; g.clearRect(0, 0, 264, 264);
+    miniS = Math.min((264 - pad * 2) / (b[1] - b[0]), (264 - pad * 2) / (b[3] - b[2])); miniOx = (264 - (b[1] - b[0]) * miniS) / 2 - b[0] * miniS; miniOy = (264 - (b[3] - b[2]) * miniS) / 2 - b[2] * miniS;
+    g.fillStyle = 'rgba(8,11,16,.78)'; g.fillRect(0, 0, 264, 264);
+    g.fillStyle = 'rgba(170,181,194,.26)'; g.fillRect(b[0] * miniS + miniOx, b[2] * miniS + miniOy, (b[1] - b[0]) * miniS, (b[3] - b[2]) * miniS);
+    for (const c of boxes) {
+      const x0 = Math.max(c.x0, b[0]), x1 = Math.min(c.x1, b[1]), z0 = Math.max(c.z0, b[2]), z1 = Math.min(c.z1, b[3]); if (x1 <= x0 || z1 <= z0) continue;
+      g.fillStyle = c.h > 2.5 ? 'rgb(10,13,18)' : 'rgba(90,100,112,.9)'; g.fillRect(x0 * miniS + miniOx, z0 * miniS + miniOy, (x1 - x0) * miniS, (z1 - z0) * miniS);
+    }
+    g.strokeStyle = 'rgba(255,255,255,.3)'; g.lineWidth = 2; g.strokeRect(1, 1, 262, 262);
+  }
+  function miniDraw() {
+    mctx.clearRect(0, 0, 264, 264); mctx.drawImage(miniBg, 0, 0);
+    const dot = (x, z, colr, r) => { mctx.fillStyle = colr; mctx.beginPath(); mctx.arc(x * miniS + miniOx, z * miniS + miniOy, r, 0, TAU); mctx.fill(); };
+    for (const e of enemies) if (!e.decor) dot(e.pos.x, e.pos.z, '#ffb24a', 5);
+    // đồng đội luôn hiện; đối thủ chỉ hiện trong chốc lát sau khi nổ súng
+    if (mode === 'pvp') for (const r of remotes.values()) { if (!r.alive) continue; if (teamMode() && !isFoe(r)) dot(r.g.position.x, r.g.position.z, '#6fb6ff', 6); else if (r.seenT > 0) dot(r.g.position.x, r.g.position.z, '#ff5a4a', 6); }
+    const x = P.pos.x * miniS + miniOx, y = P.pos.z * miniS + miniOy, sn = Math.sin(P.yaw), cs = Math.cos(P.yaw);
+    mctx.fillStyle = '#ffffff'; mctx.beginPath(); mctx.moveTo(x - sn * 12, y - cs * 12); mctx.lineTo(x + sn * 7 + cs * 7, y + cs * 7 - sn * 7); mctx.lineTo(x + sn * 7 - cs * 7, y + cs * 7 + sn * 7); mctx.closePath(); mctx.fill();
+  }
   function updateHud() {
+    miniT -= .016; if (miniT <= 0) { miniT = .08; miniDraw(); }
     if (mode === 'pvp') {
       setTxt('objLabel', room ? room.name : 'Đấu nhiều người'); setTxt('scoreTxt', myK + ' hạ'); setTxt('leftTxt', myD + ' lần chết · ' + (remotes.size + 1) + ' người');
       const left = matchEnd - performance.now(), sec = Math.ceil(left / 1000); setTxt('tmTxt', mmss(left)); $('tmTxt').classList.toggle('tB', sec <= 10); setTxt('scA', String(teamScore[0])); setTxt('scB', String(teamScore[1]));
@@ -1405,7 +1493,7 @@
     const t = TYPES[type], d = makeDrone(type);
     const e = { type, t, g: d.g, rotors: d.rotors, aim: d.aim, pos: d.g.position, vel: new T.Vector3(), r: t.r, hp: t.hp * (1 + (wave - 1) * .08), fire: rnd(1.4, 2.8), burst: 0, burstT: 0, side: Math.random() < .5 ? -1 : 1, seed: rnd(0, TAU), pop: 0, decor };
     const ar = MAP.air[Math.random() * MAP.air.length | 0]; e.pos.set(rnd(ar[0] + 1.5, ar[1] - 1.5), rnd(15, 19), rnd(ar[2] + 1.5, ar[3] - 1.5));
-    scene.add(e.g); enemies.push(e); return e;
+    skin(e.g); scene.add(e.g); enemies.push(e); return e;
   }
   function startWave(n) {
     wave = n; queue = [];
@@ -1523,7 +1611,7 @@
       else if (target) { if (target.hp > 0) { target.hp -= w.dmg * fall; target.pop = 1; if (target.hp <= 0) killEnemy(target); } anyHit = true; puff(v2.x, v2.y, v2.z, 6, C_SPARK, 5, 0, .35); }
       else if (hits.length) {
         const h = hits[0];
-        if (h.object === floor) puff(v2.x, .05, v2.z, 7, C_WATER, 2.6, 2.4, .45);
+        if (h.object === floor || h.object === floorB) puff(v2.x, .05, v2.z, 7, C_WATER, 2.6, 2.4, .45);
         else {
           nrm.copy(h.face.normal).transformDirection(h.object.matrixWorld);
           puff(v2.x, v2.y, v2.z, 4, C_SPARK, 4, .5, .3); puff(v2.x, v2.y, v2.z, 4, C_DUST, 1.6, .6, .7, 3); if (p % 3 === 0 && Math.random() < .5) smoke(v2.x + nrm.x * .1, v2.y, v2.z + nrm.z * .1, .35, .8, .32);
@@ -1547,11 +1635,11 @@
   function spawnProj(kind, o, dir, own, from) {
     const g = new T.Group();
     if (kind === 'rocket') {
-      g.add(new T.Mesh(rkBody, rkMat)); const n = new T.Mesh(rkNose, rkMat); n.position.z = .27; g.add(n);
+      g.add(new T.Mesh(rkBody, rkMat)); /* chất liệu đổi theo chế độ ở cuối hàm */ const n = new T.Mesh(rkNose, rkMat); n.position.z = .27; g.add(n);
       for (let i = 0; i < 2; i++) { const f = new T.Mesh(rkFin, GM2); f.position.z = -.18; f.rotation.z = i * PI / 2; g.add(f); }
       const sp = new T.Sprite(rkGlow); sp.scale.set(.9, .9, 1); sp.position.z = -.3; g.add(sp);
     } else { g.add(new T.Mesh(grGeo, GM2)); const b = new T.Mesh(new T.TorusGeometry(.06, .012, 6, 14), grGlow); g.add(b); }
-    g.position.copy(o); v4.copy(o).add(dir); g.lookAt(v4); scene.add(g);
+    skin(g); g.position.copy(o); v4.copy(o).add(dir); g.lookAt(v4); scene.add(g);
     rockets.push({ g, kind, c: PROJ[kind], vel: dir.clone().multiplyScalar(PROJ[kind].speed), life: PROJ[kind].life, own, from, smokeT: 0 });
   }
   function blast(pos, c, own) {
@@ -1592,9 +1680,10 @@
       r.smokeT -= dt; if (r.smokeT <= 0) { r.smokeT = .04; smoke(p.x, p.y, p.z, r.kind === 'rocket' ? .55 : .22, .7, .42); if (r.kind === 'rocket') puff(p.x, p.y, p.z, 2, C_FIRE, 1.5, 0, .25, 0); }
     }
   }
+  function skinAll() { skin(gun); for (const e of enemies) skin(e.g); for (const r of remotes.values()) skin(r.g); for (const r of rockets) skin(r.g); }
   function mapChanged() {
     document.querySelectorAll('#mapSeg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.m === mapIdx)));
-    for (const d of decals) d.visible = false; for (const r of rockets) scene.remove(r.g); rockets.length = 0; firstFrame = true;
+    for (const d of decals) d.visible = false; for (const r of rockets) scene.remove(r.g); rockets.length = 0; firstFrame = true; miniBuild();
   }
   function updatePlayer(dt) {
     let f = 0, s = 0;
@@ -1815,6 +1904,7 @@
     return out;
   })();
   const rFlashMat = new T.SpriteMaterial({ map: flashMat.map, transparent: true, blending: T.AdditiveBlending, depthWrite: false }); rFlashMat.color.setRGB(5, 3.6, 2);
+  const blobG = new T.CircleGeometry(.5, 16), blobM = new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .38, depthWrite: false }); blobG.rotateX(-PI / 2);
   function makeRemote(id, team) {
     const mats = team >= 0 ? TM[team] : SM; let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
     const g = new T.Group(), idMat = IDM[h % IDM.length]; g.rotation.order = 'YXZ';
@@ -1828,8 +1918,9 @@
     const muzzle = new T.Object3D(); muzzle.position.set(0, .008, .93); gunB.add(muzzle);
     const fl = new T.Sprite(rFlashMat); fl.scale.set(.5, .5, 1); fl.visible = false; muzzle.add(fl);
     const c = mkCanvas(256, 64), tex = new T.CanvasTexture(c), sp = new T.Sprite(new T.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, fog: false }));
-    sp.scale.set(1.8, .45, 1); sp.position.y = 2.12; g.add(sp); g.visible = false; scene.add(g);
-    return { id, g, c, tex, sp, hips, legL, legR, shinL, shinR, spine, head, gunB, muzzle, fl, nick: '', alive: false, k: 0, d: 0, tx: 0, ty: 0, tz: 0, tyaw: 0, yaw: 0, gy: 0, spd: 0, ph: 0, pt: 0, tpt: 0, w: 0, deadT: 9, flashT: 0, team, cr: 0, tcr: 0 };
+    sp.scale.set(1.8, .45, 1); sp.position.y = 2.12; g.add(sp); g.visible = false;
+    const blob = new T.Mesh(blobG, blobM); blob.position.y = .03; g.add(blob); skin(g); scene.add(g); // bóng tròn dưới chân thay cho bóng đổ thật
+    return { id, g, c, tex, sp, hips, legL, legR, shinL, shinR, spine, head, gunB, muzzle, fl, nick: '', alive: false, k: 0, d: 0, tx: 0, ty: 0, tz: 0, tyaw: 0, yaw: 0, gy: 0, spd: 0, ph: 0, pt: 0, tpt: 0, w: 0, deadT: 9, flashT: 0, team, cr: 0, tcr: 0, blob, seenT: 0 };
   }
   function setLabel(r) {
     const x = r.c.getContext('2d'); x.clearRect(0, 0, 256, 64); x.font = '800 34px "Saira Condensed", system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
@@ -1862,6 +1953,7 @@
   }
   function dressArms() { // tay áo góc nhìn thứ nhất theo phe
     const t = mode === 'pvp' ? myTeam : -1; SLV.map = t < 0 ? camoTex : null; SLV.color.set(t === 0 ? 0x1b2742 : t === 1 ? 0x25252a : 0xb0b0b0); SLV.needsUpdate = true;
+    const tw = SLV.userData.tw; if (tw) { tw.map = SLV.map; tw.color.copy(SLV.color); tw.needsUpdate = true; }
   }
   function enterPvp() {
     myK = 0; myD = 0; lastHurtBy = null; boardKey = ''; lastBeep = 0; teamScore = [0, 0]; if (humGain) humGain.gain.value = 0;
@@ -1882,13 +1974,13 @@
   }
   function onShot(m) {
     const r = remotes.get(m.from), e = m.e; if (!inMatch() || !r || !Array.isArray(e) || e.length !== 3 || !e.every(Number.isFinite)) return;
-    r.g.updateMatrixWorld(true); r.muzzle.getWorldPosition(v1); v2.set(e[0], e[1], e[2]); tracer(v1, v2, 1); r.flashT = .07; rFlashMat.rotation = rnd(0, TAU);
+    r.g.updateMatrixWorld(true); r.muzzle.getWorldPosition(v1); v2.set(e[0], e[1], e[2]); tracer(v1, v2, 1); r.flashT = .07; r.seenT = 2.5; rFlashMat.rotation = rnd(0, TAU);
     const vol = clamp(1 - v1.distanceTo(camera.position) / 55, 0, 1) * .75; if (vol > .02) sfx.shot(m.w | 0, vol);
   }
   function onRk(m) {
     const o = m.o, v = m.v; if (!inMatch() || !Array.isArray(o) || !Array.isArray(v) || o.length !== 3 || v.length !== 3 || !o.every(Number.isFinite) || !v.every(Number.isFinite)) return;
     v1.set(o[0], o[1], o[2]); v2.set(v[0], v[1], v[2]); if (v2.lengthSq() < .01) return; v2.normalize();
-    spawnProj(m.k ? 'grenade' : 'rocket', v1, v2, false, String(m.from));
+    spawnProj(m.k ? 'grenade' : 'rocket', v1, v2, false, String(m.from)); { const rr = remotes.get(String(m.from)); if (rr) rr.seenT = 2.5; }
     const vol = clamp(1 - v1.distanceTo(camera.position) / 60, 0, 1) * .8; if (vol > .02) sfx.shot(m.k ? 7 : 6, vol);
   }
   function onKill(m) {
@@ -1946,7 +2038,7 @@
         if (r.deadT < 0) r.deadT = 0; r.deadT += dt; const f = smooth(0, .5, r.deadT);
         r.g.rotation.x = -f * PI / 2; p.y = r.gy + f * .15; r.g.visible = r.deadT < 2.7; r.sp.visible = false;
       }
-      r.flashT -= dt; r.fl.visible = r.flashT > 0;
+      r.flashT -= dt; r.fl.visible = r.flashT > 0; r.blob.visible = bakeOn && r.alive; r.seenT -= dt;
     }
     presT -= dt; if (presT <= 0) { presT = LAN ? .05 : .085; sendState(); }
     boardT -= dt; if (boardT <= 0) { boardT = .5; updateBoard(); }
@@ -2060,7 +2152,7 @@
   let last = performance.now(), fAcc = 0, fN = 0, cool = 0, slow = 0;
   function adapt(dt) {
     fAcc += dt; fN++; if (fAcc < 1) return; const fps = fN / fAcc; fAcc = 0; fN = 0; cool -= 1;
-    setTxt('fpsTxt', Math.round(fps) + ' khung/giây · ' + QNAME[qName] + (resScale < 1 ? ' · nét ' + Math.round(resScale * 100) + '%' : ''));
+    setTxt('fpsTxt', Math.round(fps) + ' khung/giây · ' + QNAME[qName] + (resScale < 1 ? ' · nét ' + Math.round(resScale * 100) + '%' : '') + (dbgOn ? ' · ' + lastInfo.calls + ' lượt vẽ · ' + Math.round(lastInfo.tris / 1000) + 'k tam giác' : ''));
     if (state !== 'play' && state !== 'menu') return;
     if (fps < 45) {
       slow++;
@@ -2068,7 +2160,9 @@
       else if (slow >= 2 && autoQ && qName !== 'low') { slow = 0; setQuality(qName === 'high' ? 'mid' : 'low', true); if (state === 'play') banner('Giảm đồ họa', 'để giữ khung hình mượt'); }
     } else { slow = 0; if (fps > 57 && resScale < 1 && cool <= 0) { resScale = Math.min(1, resScale + .1); cool = 6; resize(); } }
   }
+  renderer.info.autoReset = false; const lastInfo = { calls: 0, tris: 0 };
   function frame(now) {
+    lastInfo.calls = renderer.info.render.calls; lastInfo.tris = renderer.info.render.triangles; renderer.info.reset();
     const raw = (now - last) / 1000, dt = Math.min(.1, raw); last = now;
     if (state === 'play') { time += dt; if (!dead) updatePlayer(dt); if (mode === 'solo') { updateEnemies(dt); if (state === 'play') { updateBolts(dt); updateWave(dt); } } updateFx(dt); updateHud(); }
     else if (state !== 'pause') {
@@ -2129,6 +2223,7 @@
   const GAMEKEYS = /^(Key[WASDRQC]|Arrow|Space|Shift|Control|Digit[1-8])/;
   addEventListener('keydown', e => {
     if (state === 'play' && GAMEKEYS.test(e.code)) e.preventDefault(); keys.add(e.code);
+    if (e.code === 'F3') { e.preventDefault(); dbgOn = !dbgOn; return; }
     if (e.code === 'Tab' && (state === 'play' || (state === 'pause' && mode === 'pvp'))) { e.preventDefault(); if (!scoreOn) showScore(true); return; }
     if (e.repeat) return;
     if (e.code === 'KeyR') reload();
@@ -2158,9 +2253,10 @@
 
   /* ================= khởi động ================= */
   let savedMap = 0; try { savedMap = +localStorage.getItem('hm-map') || 0; } catch (e) {}
-  loadMap(savedMap);
   let savedQ = null; try { const sq = localStorage.getItem('hm-q2'); if (sq && QUAL[sq]) savedQ = sq; } catch (e) {}
   setQuality(savedQ || qName, !savedQ);
+  loadMap(savedMap); skin(gun);
+  window.__hm = { stats: () => ({ calls: lastInfo.calls, tris: lastInfo.tris, bakeMs: Math.round(bakeMs), quality: qName, guns: WEAPONS.map(w => w.name + ' ' + triCount(w.g)), soldier: Math.round(Object.keys(SOLDIER).reduce((n, k) => n + SOLDIER[k].reduce((m, it) => m + it[0].index.count / 3, 0) * (k === 'shin' ? 2 : 1), 0)), drones: enemies.map(e => e.type + ' ' + triCount(e.g)) }) };
   function decor() { wave = 1; for (let i = 0; i < 4; i++) spawn(i === 3 ? 'heavy' : 'scout', { a: i * 1.7, r: 1.6 + (i % 2) * .8, y: 3.4 + i * .7, z: -4 - i * 3, w: (i % 2 ? -1 : 1) * (.22 + i * .04) }); }
   decor();
   progress(.95); await tick();

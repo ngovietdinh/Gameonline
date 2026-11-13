@@ -84,10 +84,15 @@ Chọn bản đồ ở màn hình đầu (chơi đơn) hoặc lúc tạo phòng 
 | 4 | Súng tỉa | 5 | Một phát rất mạnh, giữ chuột phải để nhìn qua ống ngắm |
 | 5 | Súng lục | 12 | Bắn từng phát, rút nhanh, nạp nhanh |
 | 6 | Trung liên | 75 | Băng đạn lớn, bắn dài, nạp lâu |
-| 7 | Tên lửa | 1 | Bay thẳng, nổ lan rộng 6,5 m, nạp lâu. Đứng gần chỗ nổ cũng mất máu |
-| 8 | Phóng lựu | 6 | Lựu đạn bay cầu vồng, nổ khi chạm, nổ lan 4,8 m |
+| 7 | Tên lửa | 1 | Rời nòng khoảng 40 m/s rồi động cơ đẩy lên 140 m/s, kéo vệt lửa và khói. Nổ lan 6,5 m. Đứng gần chỗ nổ cũng mất máu |
+| 8 | Phóng lựu | 6 | Lựu đạn bay cầu vồng để lại vệt sáng, nảy một lần rồi nổ sau nửa giây (chạm người thì nổ ngay). Khi cầm súng có hàng chấm vẽ trước đường bay. Nổ lan 4,8 m |
+| 9 | Súng 6 nòng | 200 | Giữ cò nửa giây cho nòng quay đủ nhanh rồi mới nhả đạn, 28 viên mỗi giây. Đang xả đạn thì đi chậm lại |
+| 0 | Katana | không cần đạn | Chém nhanh, tầm 2,8 m, mỗi nhát đổi chiều. Cầm kiếm chạy nhanh hơn 14% |
+| - | Đao Quan Vũ | không cần đạn | Chém chậm nhưng rộng và mạnh, tầm 3,8 m, trúng được nhiều mục tiêu một nhát |
 
-Đổi súng bằng phím 1 đến 8, lăn chuột, hoặc Q để về khẩu vừa dùng. Trên điện thoại bấm nút Đổi.
+Đổi vũ khí bằng phím 1 đến 9, 0, -, lăn chuột, Q để về món vừa dùng, hoặc V để rút kiếm nhanh. Trên điện thoại bấm nút Đổi.
+
+Mỗi nhát chém có một vệt sáng hình lưỡi liềm quét ngang màn hình (xanh cho katana, vàng cho đao), tia lửa khi trúng và màn hình rung nhẹ. Người khác thấy được mày đang cầm kiếm hay đao và thấy vệt chém. Vụ nổ có thêm một vòng sóng lan ra trên mặt đất.
 
 Đường đạn hiện thành vệt sáng bay từ nòng tới điểm chạm, kèm một vệt khói mờ. Đạn của mình màu vàng, đạn của người khác màu đỏ cam.
 

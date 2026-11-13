@@ -78,7 +78,7 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
       case 'start': if (r && r.host === c.id && r.state === 'wait') startMatch(r); break;
       case 's':
         if (!r || r.state !== 'play') break;
-        c.state = { m: 'pvp', n: c.name, x: num(m.x), y: num(m.y), z: num(m.z), yw: num(m.yw), pt: Math.max(-1.5, Math.min(1.5, num(m.pt))), w: Math.min(9, Math.max(0, m.w | 0)), c: m.c ? 1 : 0, a: m.a ? 1 : 0, k: Math.max(0, m.k | 0), d: Math.max(0, m.d | 0) };
+        c.state = { m: 'pvp', n: c.name, x: num(m.x), y: num(m.y), z: num(m.z), yw: num(m.yw), pt: Math.max(-1.5, Math.min(1.5, num(m.pt))), w: Math.min(15, Math.max(0, m.w | 0)), c: m.c ? 1 : 0, a: m.a ? 1 : 0, k: Math.max(0, m.k | 0), d: Math.max(0, m.d | 0) };
         toRoom(r, c, { t: 's', id: c.id, s: c.state }); break;
       case 'hit': {
         if (!r || r.state !== 'play') break;
@@ -87,7 +87,7 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
         break;
       }
       case 'shot':
-        if (r && r.state === 'play' && Array.isArray(m.e) && m.e.length === 3 && m.e.every(Number.isFinite)) toRoom(r, c, { t: 'shot', from: c.id, w: Math.min(9, Math.max(0, m.w | 0)), e: m.e.map(num) });
+        if (r && r.state === 'play' && Array.isArray(m.e) && m.e.length === 3 && m.e.every(Number.isFinite)) toRoom(r, c, { t: 'shot', from: c.id, w: Math.min(15, Math.max(0, m.w | 0)), e: m.e.map(num) });
         break;
       case 'rk': // tên lửa hoặc lựu đạn: các máy khác tự mô phỏng đường bay để hiển thị
         if (r && r.state === 'play' && Array.isArray(m.o) && Array.isArray(m.v) && m.o.length === 3 && m.v.length === 3 && m.o.every(Number.isFinite) && m.v.every(Number.isFinite))

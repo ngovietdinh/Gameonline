@@ -76,19 +76,25 @@ Chọn bản đồ ở màn hình đầu (chơi đơn) hoặc lúc tạo phòng 
 
 ## Vũ khí
 
-| Phím | Súng | Băng đạn | Đặc điểm |
-|---|---|---|---|
-| 1 | Các-bin | 30 | Tự động, cân bằng ở mọi tầm |
-| 2 | Tiểu liên | 32 | Bắn rất nhanh, mạnh ở tầm gần, yếu dần khi xa |
-| 3 | Hoa cải | 6 | 9 viên chùm mỗi phát, rất mạnh ở sát bên |
-| 4 | Súng tỉa | 5 | Một phát rất mạnh, giữ chuột phải để nhìn qua ống ngắm |
-| 5 | Súng lục | 12 | Bắn từng phát, rút nhanh, nạp nhanh |
-| 6 | Trung liên | 75 | Băng đạn lớn, bắn dài, nạp lâu |
-| 7 | Tên lửa | 1 | Rời nòng khoảng 40 m/s rồi động cơ đẩy lên 140 m/s, kéo vệt lửa và khói. Nổ lan 6,5 m. Đứng gần chỗ nổ cũng mất máu |
-| 8 | Phóng lựu | 6 | Lựu đạn bay cầu vồng để lại vệt sáng, nảy một lần rồi nổ sau nửa giây (chạm người thì nổ ngay). Khi cầm súng có hàng chấm vẽ trước đường bay. Nổ lan 4,8 m |
-| 9 | Súng 6 nòng | 200 | Giữ cò nửa giây cho nòng quay đủ nhanh rồi mới nhả đạn, 28 viên mỗi giây. Đang xả đạn thì đi chậm lại |
-| 0 | Katana | không cần đạn | Chém nhanh, tầm 2,8 m, mỗi nhát đổi chiều. Cầm kiếm chạy nhanh hơn 14% |
-| - | Đao Quan Vũ | không cần đạn | Chém chậm nhưng rộng và mạnh, tầm 3,8 m, trúng được nhiều mục tiêu một nhát |
+| Phím | Súng | Băng đạn | Dự trữ | Đặc điểm |
+|---|---|---|---|---|
+| 1 | Các-bin | 30 | 120 | Tự động, cân bằng ở mọi tầm |
+| 2 | Tiểu liên | 32 | 128 | Bắn rất nhanh, mạnh ở tầm gần, yếu dần khi xa |
+| 3 | Hoa cải | 6 | 24 | 9 viên chùm mỗi phát, rất mạnh ở sát bên |
+| 4 | Súng tỉa | 5 | 15 | Một phát rất mạnh, giữ chuột phải để nhìn qua ống ngắm |
+| 5 | Súng lục | 12 | 48 | Bắn từng phát, rút nhanh, nạp nhanh |
+| 6 | Trung liên | 75 | 150 | Băng đạn lớn, bắn dài, nạp lâu |
+| 7 | Tên lửa | 1 | 3 | Rời nòng khoảng 40 m/s rồi động cơ đẩy lên 140 m/s, kéo vệt lửa và khói. Nổ lan 6,5 m. Đứng gần chỗ nổ cũng mất máu |
+| 8 | Phóng lựu | 6 | 6 | Lựu đạn bay cầu vồng để lại vệt sáng, nảy một lần rồi nổ sau nửa giây (chạm người thì nổ ngay). Khi cầm súng có hàng chấm vẽ trước đường bay. Nổ lan 4,8 m |
+| 9 | Súng 6 nòng | 200 | 200 | Giữ cò nửa giây cho nòng quay đủ nhanh rồi mới nhả đạn, 28 viên mỗi giây. Đang xả đạn thì đi chậm lại |
+| 0 | Katana | không cần đạn | — | Chém nhanh, tầm 2,8 m, mỗi nhát đổi chiều. Cầm kiếm chạy nhanh hơn 14% |
+| - | Đao Quan Vũ | không cần đạn | — | Chém chậm nhưng rộng và mạnh, tầm 3,8 m, trúng được nhiều mục tiêu một nhát |
+
+**Đạn có hạn.** Mỗi khẩu mang theo một băng đã lắp và số đạn dự trữ ở bảng trên; ô đạn hiện "đạn trong băng / đạn dự trữ". Nạp đạn lấy từ dự trữ. Hết sạch đạn thì trò chơi tự chuyển sang khẩu còn đạn, không còn khẩu nào thì rút katana. Khẩu hết đạn bị gạch mờ trên thanh vũ khí và bị bỏ qua khi lăn chuột hay bấm Đổi.
+
+**Súng rơi.** Người bị hạ làm rơi khẩu đang cầm ngay chỗ ngã (cầm kiếm, đao thì không rơi gì). Súng rơi xoay tại chỗ, có quầng sáng và tên, hiện chấm vàng trên bản đồ nhỏ, nằm 30 giây rồi biến mất. Đi ngang qua là tự nhặt: nhận số đạn khẩu đó còn lại (ít nhất một băng), không vượt quá mức mang tối đa. Đạn khẩu đó đang đầy thì không nhặt, để lại cho người khác. Hai người cùng tới thì máy chủ cho người gửi trước.
+
+**Hồi sinh** thì mọi khẩu đầy băng và đầy dự trữ trở lại. Chơi một mình: máy bay bị hạ có 30% rơi hộp đạn (máy bay hạng nặng luôn rơi), nhặt được thì mỗi khẩu thêm một băng.
 
 Đổi vũ khí bằng phím 1 đến 9, 0, -, lăn chuột, Q để về món vừa dùng, hoặc V để rút kiếm nhanh. Trên điện thoại bấm nút Đổi.
 
@@ -120,7 +126,7 @@ Ghi chú về quy trình: game không dùng file mô hình ngoài, mọi hình k
 
 ## Điều khiển
 
-- Máy tính: WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, 1 đến 8 đổi súng, Space nhảy, Esc tạm dừng.
+- Máy tính: WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, 1 đến 9, 0, - đổi súng, Space nhảy, Esc tạm dừng.
 - **Shift** (giữ, khi đang tiến): chạy nhanh. **Ctrl** hoặc **C** (giữ): ngồi, đi chậm hơn, bắn chụm hơn, khó bị trúng hơn. **Tab** (giữ): bảng thành tích.
 - Khi vào trận, game tự bật toàn màn hình. Trên Chrome và Edge việc này còn khóa phím, nhờ đó giữ Ctrl rồi bấm W không đóng thẻ trình duyệt. Trên Firefox và Safari, Ctrl+W vẫn là lệnh đóng thẻ (trình duyệt sẽ hỏi lại trước khi đóng), nên dùng phím C để ngồi.
 - Điện thoại:

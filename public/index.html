@@ -173,9 +173,13 @@
   #wbar span { display: flex; gap: 6px; align-items: baseline; padding: 4px 9px; border: 1px solid var(--line); border-radius: 3px; background: rgba(8,11,16,.55); font-size: 12px; color: var(--muted); white-space: nowrap; }
   #wbar span b { font: 800 13px var(--display); }
   #wbar span.on { color: var(--ink); border-color: var(--cyan); }
+  #wbar span.empty { opacity: .45; text-decoration: line-through; }
+  #pick { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); padding: 6px 14px; border: 1px solid var(--line); border-radius: 3px; background: rgba(8,11,16,.78); color: var(--ink); font: 800 15px var(--display); letter-spacing: .04em; text-align: center; white-space: nowrap; opacity: 0; transition: opacity .25s; pointer-events: none; }
+  #pick.on { opacity: 1; }
+  #pick small { display: block; font: 600 12px var(--body); letter-spacing: .02em; color: #ffe9a8; }
   #wbar span.on b { color: var(--cyan); }
   #stage.touch #wbar { display: none; }
-  @media (max-width: 760px) { #wbar span { font-size: 0; gap: 0; padding: 4px 8px; } #wbar span b { font-size: 13px; } }
+  @media (max-width: 1240px) { #wbar span { font-size: 0; gap: 0; padding: 4px 8px; } #wbar span b { font-size: 13px; } }
   #swapBtn { width: 54px; height: 54px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 174px); bottom: 16px; }
   .field { display: grid; gap: 6px; max-width: 280px; }
   .field span { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
@@ -216,6 +220,7 @@
     <div id="score" hidden><div class="sc-card"><h3 id="scTitle"></h3><div class="sc-cols" id="scCols"></div></div></div>
     <div id="wbar"></div>
     <div id="banner"></div>
+    <div id="pick" role="status"></div>
     <div id="touchUi" hidden>
       <div id="joy"><div id="knob"></div></div>
       <button class="tbtn" id="swapBtn" type="button" aria-label="Đổi súng">Đổi</button>
@@ -232,7 +237,7 @@
       <h1>Hẻm<br>Mưa</h1>
       <p>Nửa đêm, một con hẻm vừa tạnh mưa. Đàn máy bay tuần tra bay vào từ trên mái. <strong>Giữ hẻm qua từng đợt.</strong></p>
       <ul class="how">
-        <li><b>Máy tính:</b> WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, phím 1 đến 9, 0, - hoặc lăn chuột để đổi vũ khí (V rút kiếm nhanh), Shift chạy nhanh, Ctrl hoặc C để ngồi, Space nhảy, giữ Tab xem bảng thành tích.</li>
+        <li><b>Máy tính:</b> WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn (đạn có hạn, đi qua súng rơi để nhặt), phím 1 đến 9, 0, - hoặc lăn chuột để đổi vũ khí (V rút kiếm nhanh), Shift chạy nhanh, Ctrl hoặc C để ngồi, Space nhảy, giữ Tab xem bảng thành tích.</li>
         <li><b>Điện thoại:</b> vào trận là màn hình tự xoay ngang. Cần ảo bên trái để chạy (đẩy hết cỡ là chạy nhanh), kéo nửa phải để ngắm. Súng tự bắn khi tâm ngắm trúng địch; vẫn có nút Bắn, Ngắm, Nạp, Nhảy, Ngồi, Đổi.</li>
         <li><b>Đấu nhiều người:</b> mọi người mở chung địa chỉ này, bấm nút đấu rồi tạo phòng hoặc vào phòng có sẵn. Đấu đội chia hai phe Công an và Tội phạm, hết giờ phe nào hạ nhiều hơn thì thắng.</li>
       </ul>
@@ -1246,7 +1251,8 @@
     { name: 'Đao Quan Vũ', g: w10, lh: lh10, melee: true, range: 3.8, arc: 1.25, dur: .42, sweep: 1.35, col: [5, 2.6, .6], mag: 0, rate: 1.35, dmg: 90, pellets: 1, hip: 0, adsS: 0, bloom: 0, reload: 0, kick: 0, vk: 0, auto: true, adsFov: 1, f0: 1, f1: 2, fmin: 1, hipP: [.22, -.24, -.46], adsP: [.22, -.24, -.46], my: 0, mz: -.5, ej: [0, 0, 0], fl: 0 }
   ];
   const WKEY = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-'];
-  WEAPONS.forEach(w => { w.ammo = w.mag; w.lhB = w.lh.position.clone(); });
+  const RES0 = [120, 128, 24, 15, 48, 150, 3, 6, 200, 0, 0]; // đạn dự trữ mang theo lúc vào trận và mỗi lần hồi sinh
+  WEAPONS.forEach((w, i) => { w.ammo = w.mag; w.res0 = w.res = RES0[i]; w.lhB = w.lh.position.clone(); });
   const flashTexC = mkCanvas(128, 128), fg = flashTexC.getContext('2d'); fg.translate(64, 64);
   for (let i = 0; i < 9; i++) { const a = i / 9 * TAU + sr(), l = 26 + sr() * 36, gr = fg.createLinearGradient(0, 0, Math.cos(a) * l, Math.sin(a) * l); gr.addColorStop(0, 'rgba(255,240,200,1)'); gr.addColorStop(1, 'rgba(255,150,40,0)'); fg.strokeStyle = gr; fg.lineWidth = 5 + sr() * 9; fg.beginPath(); fg.moveTo(0, 0); fg.lineTo(Math.cos(a) * l, Math.sin(a) * l); fg.stroke(); }
   const fgr = fg.createRadialGradient(0, 0, 0, 0, 0, 30); fgr.addColorStop(0, 'rgba(255,255,255,1)'); fgr.addColorStop(1, 'rgba(255,180,60,0)'); fg.fillStyle = fgr; fg.fillRect(-64, -64, 128, 128);
@@ -1518,6 +1524,7 @@
     mctx.clearRect(0, 0, 264, 264); mctx.drawImage(miniBg, 0, 0);
     const dot = (x, z, colr, r) => { mctx.fillStyle = colr; mctx.beginPath(); mctx.arc(x * miniS + miniOx, z * miniS + miniOy, r, 0, TAU); mctx.fill(); };
     for (const e of enemies) if (!e.decor) dot(e.pos.x, e.pos.z, '#ffb24a', 5);
+    for (const d of drops.values()) dot(d.x, d.z, '#ffe27a', 3.5);
     // đồng đội luôn hiện; đối thủ chỉ hiện trong chốc lát sau khi nổ súng
     if (mode === 'pvp') for (const r of remotes.values()) { if (!r.alive) continue; if (teamMode() && !isFoe(r)) dot(r.g.position.x, r.g.position.z, '#6fb6ff', 6); else if (r.seenT > 0) dot(r.g.position.x, r.g.position.z, '#ff5a4a', 6); }
     const x = P.pos.x * miniS + miniOx, y = P.pos.z * miniS + miniOy, sn = Math.sin(P.yaw), cs = Math.cos(P.yaw);
@@ -1532,14 +1539,16 @@
     }
     else { setTxt('objLabel', 'Đợt ' + wave); setTxt('scoreTxt', fmt(score)); const left = enemies.length + queue.length; setTxt('leftTxt', left ? 'Còn ' + left + ' mục tiêu' : 'Hẻm tạm yên'); }
     setTxt('hpTxt', String(Math.ceil(P.hp))); $('hpBar').style.transform = `scaleX(${clamp(P.hp / 100, 0, 1)})`; $('hpBox').classList.toggle('low', P.hp < 35);
-    setTxt('gunTxt', reloadT > 0 ? 'Đang nạp đạn' : GUN.name); setTxt('ammoTxt', GUN.melee ? '—' : String(GUN.ammo)); setTxt('magTxt', GUN.melee ? '' : ' / ' + GUN.mag); $('ammoBox').classList.toggle('low', !GUN.melee && GUN.ammo <= GUN.mag * .25);
+    setTxt('gunTxt', reloadT > 0 ? 'Đang nạp đạn' : !GUN.melee && GUN.ammo + GUN.res <= 0 ? GUN.name + ' · hết đạn' : GUN.name); setTxt('ammoTxt', GUN.melee ? '—' : String(GUN.ammo)); setTxt('magTxt', GUN.melee ? '' : ' / ' + GUN.res);
+    let ek = ''; for (const w of WEAPONS) ek += hasAmmo(w) ? '0' : '1'; if (ek !== wbarKey) { wbarKey = ek; renderWbar(); }
+    $('ammoBox').classList.toggle('low', !GUN.melee && GUN.ammo <= GUN.mag * .25);
     $('hitmark').style.opacity = hitT > 0 ? 1 : 0; $('hurt').style.opacity = clamp(hurtT * 1.5 + (P.hp < 35 ? (35 - P.hp) / 60 : 0), 0, 1);
     const cr = $('cross'); cr.style.opacity = adsK > .5 ? 0 : 1; cr.style.setProperty('--gap', (2 + (bloomS + GUN.hip) * 400 + Math.hypot(P.vel.x, P.vel.z) * 1.2) + 'px');
     const dm = $('dmg'); dm.style.opacity = clamp(dmgT * 1.4, 0, 1); if (dmgT > 0) dm.style.transform = `rotate(${dmgAng}rad)`;
   }
 
   /* ================= vòng chơi ================= */
-  function clearWorld() { for (const e of enemies) scene.remove(e.g); for (const b of bolts) scene.remove(b.m); enemies = []; bolts = []; for (const r of rockets) scene.remove(r.g); rockets.length = 0; }
+  function clearWorld() { clearDrops(); for (const e of enemies) scene.remove(e.g); for (const b of bolts) scene.remove(b.m); enemies = []; bolts = []; for (const r of rockets) scene.remove(r.g); rockets.length = 0; }
   function spawn(type, decor) {
     const t = TYPES[type], d = makeDrone(type);
     const e = { type, t, g: d.g, rotors: d.rotors, aim: d.aim, pos: d.g.position, vel: new T.Vector3(), r: t.r, hp: t.hp * (1 + (wave - 1) * .08), fire: rnd(1.4, 2.8), burst: 0, burstT: 0, side: Math.random() < .5 ? -1 : 1, seed: rnd(0, TAU), pop: 0, decor };
@@ -1558,7 +1567,7 @@
     touchMode = lastPT === 'touch' || lastPT === 'pen'; stage.classList.toggle('touch', touchMode); $('touchUi').hidden = !touchMode;
     initAudio(); clearWorld();
     P.pos.set(MAP.solo[0], 0, MAP.solo[1]); P.vel.set(0, 0, 0); P.vy = 0; P.yaw = MAP.solo[2]; P.pitch = 0; P.hp = 100; P.recoil = P.recoilYaw = 0; P.since = 9;
-    for (const w of WEAPONS) w.ammo = w.mag; equip(0); cd = 0; reloadT = 0; firing = false; ads = false; $('adsBtn').setAttribute('aria-pressed', 'false');
+    for (const w of WEAPONS) { w.ammo = w.mag; w.res = w.res0; } outSwitch = false; equip(0); cd = 0; reloadT = 0; firing = false; ads = false; $('adsBtn').setAttribute('aria-pressed', 'false');
     score = 0; kills = 0; interT = 0; hurtT = 0; dmgT = 0; keys.clear(); joyX = joyY = 0; crouchK = 0; crouchTog = false; $('crouchBtn').setAttribute('aria-pressed', 'false');
     vm.visible = true; state = 'play'; show(null);
     $('board').hidden = mode !== 'pvp'; $('timer').hidden = mode !== 'pvp'; $('restartBtn').hidden = mode === 'pvp'; $('resumeBtn').textContent = 'Chơi tiếp';
@@ -1598,7 +1607,7 @@
     if (P.hp <= 0) { P.hp = 0; updateHud(); gameOver(); }
   }
   const ray = new T.Raycaster(), fwd = new T.Vector3(), right = new T.Vector3(), upv = new T.Vector3(), nrm = new T.Vector3();
-  function reload() { if (GUN.melee || reloadT > 0 || switchT > 0 || GUN.ammo === GUN.mag || state !== 'play' || dead) return; reloadT = GUN.reload; ads = false; $('adsBtn').setAttribute('aria-pressed', 'false'); tone(260, .05, 'square', .05); noise(.06, 3000, 800, .12); setTimeout(() => { noise(.05, 2500, 900, .14); tone(180, .05, 'square', .05); }, 900); }
+  function reload() { if (GUN.melee || reloadT > 0 || switchT > 0 || GUN.ammo >= GUN.mag || GUN.res <= 0 || state !== 'play' || dead) return; reloadT = GUN.reload; ads = false; $('adsBtn').setAttribute('aria-pressed', 'false'); tone(260, .05, 'square', .05); noise(.06, 3000, 800, .12); setTimeout(() => { noise(.05, 2500, 900, .14); tone(180, .05, 'square', .05); }, 900); }
   function explode(pos, big) {
     puff(pos.x, pos.y, pos.z, big ? 60 : 30, C_FIRE, big ? 10 : 7, 1.5, .6); puff(pos.x, pos.y, pos.z, big ? 26 : 14, C_EMBER, big ? 6 : 4, 3, 1.4, 5);
     for (let i = 0; i < (big ? 6 : 3); i++) smoke(pos.x + rnd(-.4, .4), pos.y + rnd(-.2, .4), pos.z + rnd(-.4, .4), big ? 2.2 : 1.3, rnd(1.2, 2.2), .3);
@@ -1606,17 +1615,24 @@
   }
   function killEnemy(e, silent) {
     const i = enemies.indexOf(e); if (i < 0) return; enemies.splice(i, 1); scene.remove(e.g); explode(e.pos, e.type === 'heavy');
-    if (!silent) { kills++; score += e.t.pts; }
+    if (!silent) { kills++; score += e.t.pts; if (mode === 'solo' && !e.decor && Math.random() < (e.type === 'heavy' ? 1 : .3)) crateAt(e.pos.x, e.pos.z); }
   }
   function equip(i) { GUN.g.visible = false; cur = i; GUN = WEAPONS[i]; GUN.g.visible = true; reloadT = 0; cycT = 0; swingT = 0; spinK = 0; flash.position.set(0, GUN.my, GUN.mz - .02); renderWbar(); }
   function setWeapon(i) {
     if (i === cur || i < 0 || i >= WEAPONS.length || state !== 'play' || dead) return;
-    lastW = cur; equip(i); ads = false; $('adsBtn').setAttribute('aria-pressed', 'false'); switchT = .28; cd = Math.max(cd, .3); noise(.05, 2500, 900, .1); tone(320, .04, 'square', .04);
+    lastW = cur; outSwitch = false; equip(i); ads = false; $('adsBtn').setAttribute('aria-pressed', 'false'); switchT = .28; cd = Math.max(cd, .3); noise(.05, 2500, 900, .1); tone(320, .04, 'square', .04);
   }
   function renderWbar() {
     const b = $('wbar'); if (!b.children.length) WEAPONS.forEach((w, i) => { const s = document.createElement('span'), n = document.createElement('b'); n.textContent = WKEY[i]; s.append(n, w.name); b.append(s); });
-    [...b.children].forEach((c, i) => c.classList.toggle('on', i === cur));
+    [...b.children].forEach((c, i) => { c.classList.toggle('on', i === cur); c.classList.toggle('empty', !hasAmmo(WEAPONS[i])); });
   }
+  const hasAmmo = w => w.melee || w.ammo + w.res > 0;
+  function cycleW(dir) { const n = WEAPONS.length; for (let k = 1; k < n; k++) { const i = (cur + dir * k + n * k) % n; if (hasAmmo(WEAPONS[i])) { setWeapon(i); return; } } } // đổi súng thì bỏ qua khẩu đã hết đạn
+  function outOfAmmo() { // hết sạch đạn khẩu đang cầm: chuyển sang khẩu còn đạn, không còn khẩu nào thì rút kiếm
+    let i = WEAPONS.findIndex(w => !w.melee && w.ammo + w.res > 0); const none = i < 0; if (none) i = 9;
+    pickMsg(GUN.name + ' hết đạn', 'Chuyển sang ' + WEAPONS[i].name); setWeapon(i); outSwitch = none;
+  }
+  let outSwitch = false, wbarKey = '';
   let swingT = 0, swingDir = -1, swingHit = true, spinK = 0, melZ = 0, shotN = 0;
   function meleeHit(w) {
     camera.getWorldDirection(fwd); const o = camera.position; let any = false;
@@ -1638,9 +1654,9 @@
       if (cd > 0 || switchT > 0) return; cd = 1 / w.rate; fired = true; swingT = w.dur; swingDir = -swingDir; swingHit = false;
       slashFx(null, w, swingDir); sfx.swing(w.range > 3, 1); if (mode === 'pvp') net({ t: 'shot', w: cur, e: [r2(P.pos.x), r2(P.pos.y), r2(P.pos.z)] }); return;
     }
-    if (w.spin && spinK < .92) return; // nòng chưa quay đủ nhanh
+    if (w.spin && w.ammo > 0 && spinK < .92) return; // nòng chưa quay đủ nhanh
     if (reloadT > 0 || cd > 0 || switchT > 0) return;
-    if (w.ammo <= 0) { if (!fired) tone(900, .03, 'square', .04); fired = true; reload(); return; }
+    if (w.ammo <= 0) { if (!fired) tone(900, .03, 'square', .04); fired = true; if (w.res > 0) reload(); else outOfAmmo(); return; }
     w.ammo--; cd = 1 / w.rate; fired = true; cycT = cycMax = w.cyc ? Math.min(.75, .85 / w.rate) : 0;
     camera.getWorldDirection(fwd); right.crossVectors(fwd, UP).normalize(); upv.crossVectors(right, fwd);
     const o = camera.position;
@@ -1808,7 +1824,7 @@
   }
   function mapChanged() {
     document.querySelectorAll('#mapSeg button').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.m === mapIdx)));
-    for (const d of decals) d.visible = false; for (const r of rockets) scene.remove(r.g); rockets.length = 0; firstFrame = true; miniBuild();
+    for (const d of decals) d.visible = false; for (const r of rockets) scene.remove(r.g); rockets.length = 0; clearDrops(); firstFrame = true; miniBuild();
   }
   function updatePlayer(dt) {
     let f = 0, s = 0;
@@ -1833,7 +1849,7 @@
     camera.position.set(P.pos.x, P.pos.y + 1.66 - crouchK * .58 + Math.sin(P.bob * 2) * .028 * bobK - P.land * .09, P.pos.z);
     const shk = reduced ? 0 : shake * .022;
     camera.rotation.set(clamp(P.pitch + P.recoil + rnd(-1, 1) * shk, -1.5, 1.5), P.yaw + P.recoilYaw + rnd(-1, 1) * shk, (reduced ? 0 : Math.cos(P.bob) * .004 * bobK) + rnd(-1, 1) * shk);
-    cd -= dt; if (reloadT > 0) { reloadT -= dt; if (reloadT <= 0) { GUN.ammo = GUN.mag; noise(.05, 3500, 1200, .16); tone(420, .04, 'square', .05); } }
+    cd -= dt; if (reloadT > 0) { reloadT -= dt; if (reloadT <= 0) { const n = Math.min(GUN.mag - GUN.ammo, GUN.res); GUN.ammo += n; GUN.res -= n; noise(.05, 3500, 1200, .16); tone(420, .04, 'square', .05); } }
     spinK += ((GUN.spin && (firing || afOn) && reloadT <= 0 && GUN.ammo > 0 ? 1 : 0) - spinK) * Math.min(1, dt * (firing || afOn ? 4.5 : 2.2)); if (GUN.spinG) GUN.spinG.rotation.z -= spinK * dt * 46;
     if (swingT > 0) { swingT -= dt; if (!swingHit && GUN.melee && swingT <= GUN.dur * .55) { swingHit = true; meleeHit(GUN); } }
     if (touchMode && autoFire && !GUN.proj) { afT -= dt; if (afT <= 0) { afT = .09; afOn = aimOnFoe(); } } else afOn = false; // điện thoại: tự bắn khi tâm ngắm trúng địch
@@ -1950,6 +1966,7 @@
     if (boltK > 0) { boltK -= dt * 2.2; const fl = boltK > 0 ? (Math.sin(boltK * 40) > -.2 ? 1 : .25) * boltK : 0; bolt.intensity = fl * 2.2; skyMat.color.setScalar(.7 + fl * 14); hemi.intensity = .09 + fl * 1.2; rainMat.uniforms.uFlash.value = fl * .35; }
     hitT -= dt; hurtT = Math.max(0, hurtT - dt); dmgT = Math.max(0, dmgT - dt * .9);
     if (bannerTimer > 0) { bannerTimer -= dt; if (bannerTimer <= 0) $('banner').classList.remove('on'); }
+    updateDrops(dt);
     rainMat.uniforms.uTime.value = time; rainMat.uniforms.uCam.value.copy(camera.position); FU.uTime.value = time; sky.position.set(camera.position.x, 0, camera.position.z);
   }
 
@@ -2039,6 +2056,60 @@
   })();
   const rFlashMat = new T.SpriteMaterial({ map: flashMat.map, transparent: true, blending: T.AdditiveBlending, depthWrite: false }); rFlashMat.color.setRGB(5, 3.6, 2);
   const blobG = new T.CircleGeometry(.5, 16), blobM = new T.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .38, depthWrite: false }); blobG.rotateX(-PI / 2);
+  /* ---------- súng rơi và hộp đạn ---------- */
+  const drops = new Map(), dropV = new T.Vector3(), dropLab = {}, dropGlowM = new T.SpriteMaterial({ map: glowTex, blending: T.AdditiveBlending, depthWrite: false, transparent: true });
+  const crateG = new T.BoxGeometry(.38, .22, .26), crateBandG = new T.BoxGeometry(.39, .05, .27), crateM = std({ color: 0x55653a, roughness: .7 }), crateBandM = std({ color: 0xd8b23a, roughness: .5 });
+  dropGlowM.color.setRGB(.8, .62, .22);
+  let dropSeq = 0, pickT = 0;
+  function dropLabel(wi) { // nhãn tên, mỗi loại chỉ vẽ một lần
+    if (dropLab[wi]) return dropLab[wi];
+    const c = mkCanvas(256, 64), x = c.getContext('2d'), txt = wi < 0 ? 'Hộp đạn' : WEAPONS[wi].name; x.font = '800 32px "Saira Condensed", system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.lineWidth = 6; x.strokeStyle = 'rgba(4,6,10,.9)'; x.strokeText(txt, 128, 34); x.fillStyle = '#ffe9a8'; x.fillText(txt, 128, 34);
+    return (dropLab[wi] = new T.SpriteMaterial({ map: new T.CanvasTexture(c), transparent: true, depthWrite: false, fog: false }));
+  }
+  function addDrop(id, wi, am, x, z, life, local) {
+    if (drops.has(id)) return; wi = wi < 0 ? -1 : clamp(wi | 0, 0, 8);
+    const g = new T.Group(), spin = new T.Group(); g.position.set(x, 0, z); spin.position.y = .5; g.add(spin);
+    if (wi < 0) spin.add(new T.Mesh(crateG, crateM), new T.Mesh(crateBandG, crateBandM));
+    else { const h = new T.Group(), L = WLEN[wi]; for (const [geo, mk] of SOLDIER.gun) h.add(new T.Mesh(geo, SM[mk])); h.scale.set(1.3, 1.3, 1.3 * L); h.position.set(0, -.07, -.52 * L); const tilt = new T.Group(); tilt.rotation.x = -.3; tilt.add(h); spin.add(tilt); }
+    const gl = new T.Sprite(dropGlowM); gl.scale.set(1.15, 1.15, 1); gl.position.y = .45; g.add(gl);
+    const lab = new T.Sprite(dropLabel(wi)); lab.scale.set(1.5, .375, 1); lab.position.y = 1.08; g.add(lab);
+    const blob = new T.Mesh(blobG, blobM); blob.scale.setScalar(.7); blob.position.y = .03; g.add(blob);
+    skin(g); scene.add(g); drops.set(id, { id, w: wi, am, g, spin, x, z, life, local: !!local, ask: 0, ph: Math.random() * 6 });
+  }
+  function removeDrop(id) { const d = drops.get(id); if (d) { scene.remove(d.g); drops.delete(id); } }
+  function clearDrops() { for (const d of drops.values()) scene.remove(d.g); drops.clear(); }
+  function crateAt(x, z) { // hộp đạn rơi ra từ máy bay bị hạ (chơi một mình), đẩy ra khỏi tường để tới nhặt được
+    dropV.set(clamp(x, MAP.bounds[0] + 1, MAP.bounds[1] - 1), 0, clamp(z, MAP.bounds[2] + 1, MAP.bounds[3] - 1)); resolve(dropV, .45);
+    addDrop('c' + (++dropSeq), -1, 0, dropV.x, dropV.z, 40, true);
+  }
+  function pickMsg(txt, sub) { const b = $('pick'); b.textContent = txt; if (sub) { const s = document.createElement('small'); s.textContent = sub; b.append(s); } b.classList.add('on'); pickT = 2.2; }
+  const canTake = wi => { if (wi < 0) return WEAPONS.some(w => !w.melee && w.res < w.res0); const w = WEAPONS[wi]; return w.res < w.res0 || w.ammo < w.mag; };
+  function giveAmmo(wi, am) {
+    tone(520, .05, 'triangle', .07); noise(.05, 3200, 1000, .12);
+    if (wi < 0) { // hộp đạn: mỗi khẩu thêm một băng
+      for (const w of WEAPONS) if (!w.melee) w.res += Math.max(0, Math.min(w.mag, w.res0 - w.res));
+      pickMsg('Nhặt hộp đạn', 'Mỗi khẩu thêm một băng');
+      if (GUN.melee && outSwitch) { const i = WEAPONS.findIndex(w => !w.melee && w.ammo + w.res > 0); if (i >= 0) setWeapon(i); } else if (!GUN.melee && GUN.ammo <= 0) reload();
+      return;
+    }
+    const w = WEAPONS[wi], n = Math.min(am, w.res0 - w.res + w.mag - w.ammo); if (n <= 0) return;
+    if (wi !== cur) { const m = Math.min(n, w.mag - w.ammo); w.ammo += m; w.res += n - m; } else w.res += n; // khẩu đang cất thì lắp sẵn băng, khẩu đang cầm thì phải nạp
+    pickMsg('Nhặt ' + w.name, '+' + n + ' viên');
+    if (wi === cur) { if (w.ammo <= 0) reload(); } else if (GUN.melee ? outSwitch : GUN.ammo + GUN.res <= 0) setWeapon(wi);
+  }
+  function updateDrops(dt) {
+    if (pickT > 0) { pickT -= dt; if (pickT <= 0) $('pick').classList.remove('on'); }
+    const now = performance.now();
+    for (const d of drops.values()) {
+      d.life -= dt; if (d.life <= 0) { removeDrop(d.id); continue; }
+      d.ph += dt; d.spin.rotation.y += dt * 1.6; d.spin.position.y = .5 + Math.sin(d.ph * 2.4) * .06; d.g.visible = d.life > 5 || (d.life * 5 | 0) % 2 === 0; // sắp biến mất thì nhấp nháy
+      if (dead || ghost || state !== 'play' || P.pos.y > 1.6 || Math.hypot(P.pos.x - d.x, P.pos.z - d.z) > 1.35 || !canTake(d.w)) continue;
+      if (d.local) { giveAmmo(d.w, d.am); removeDrop(d.id); } else if (now - d.ask > 700) { d.ask = now; net({ t: 'take', id: d.id }); }
+    }
+  }
+  function onDrop(m) { if (inMatch() && typeof m.id === 'string') addDrop(m.id, clamp(m.w | 0, 0, 8), clamp(m.am | 0, 1, 400), +m.x || 0, +m.z || 0, clamp((+m.life || 30000) / 1000, 1, 30)); }
+  function onTook(m) { if (!inMatch()) return; removeDrop(m.id); if (m.by === myId) giveAmmo(clamp(m.w | 0, 0, 8), clamp(m.am | 0, 1, 400)); }
   function makeRemote(id, team) {
     const mats = team >= 0 ? TM[team] : SM; let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
     const g = new T.Group(), idMat = IDM[h % IDM.length]; g.rotation.order = 'YXZ';
@@ -2085,7 +2156,8 @@
     for (const s of list) { let d = 999; for (const r of remotes.values()) if (r.alive && isFoe(r)) d = Math.min(d, Math.hypot(r.g.position.x - s[0], r.g.position.z - s[1])); d += Math.random() * 5; if (d > bestD) { bestD = d; bestS = s; } }
     P.pos.set(bestS[0], 0, bestS[1]); resolve(P.pos, .42); P.vel.set(0, 0, 0); P.vy = 0; P.pitch = 0; P.recoil = P.recoilYaw = 0; P.hp = 100; P.since = 9;
     P.yaw = Math.atan2(P.pos.x - (MAP.bounds[0] + MAP.bounds[1]) / 2, P.pos.z - (MAP.bounds[2] + MAP.bounds[3]) / 2); // quay mặt về giữa bản đồ
-    for (const w of WEAPONS) w.ammo = w.mag; reloadT = 0; dead = false; vm.visible = true; sendState();
+    for (const w of WEAPONS) { w.ammo = w.mag; w.res = w.res0; } if (GUN.melee && outSwitch) equip(lastW < 9 ? lastW : 0); outSwitch = false; // hồi sinh: đủ súng, đầy đạn
+    reloadT = 0; dead = false; vm.visible = true; sendState();
   }
   function dressArms() { // tay áo góc nhìn thứ nhất theo phe
     const t = mode === 'pvp' ? myTeam : -1; SLV.map = t < 0 ? camoTex : null; SLV.color.set(t === 0 ? 0x1b2742 : t === 1 ? 0x25252a : 0xb0b0b0); SLV.needsUpdate = true;
@@ -2102,7 +2174,7 @@
     if (from) { dmgT = 1; dmgAng = Math.atan2(from.x - P.pos.x, -(from.z - P.pos.z)) + P.yaw; }
     if (P.hp > 0) return;
     P.hp = 0; dead = true; respawnT = 3; myD++; firing = false; ads = false; vm.visible = false; $('scope').style.opacity = 0;
-    const by = remotes.get(lastHurtBy); net({ t: 'kill', by: lastHurtBy });
+    const by = remotes.get(lastHurtBy); net({ t: 'kill', by: lastHurtBy, w: cur, am: GUN.melee ? 0 : Math.max(GUN.mag, GUN.ammo + GUN.res) }); // khẩu đang cầm rơi lại, ít nhất còn một băng
     banner('Bị ' + (by ? by.nick : 'đối thủ') + ' hạ', 'Hồi sinh sau 3 giây'); sfx.boom(false); sendState();
   }
   function onHit(m) {
@@ -2281,7 +2353,7 @@
       else if (m.t === 'score') { if (Array.isArray(m.s)) teamScore = [m.s[0] | 0, m.s[1] | 0]; }
       else if (m.t === 'err') { if (state === 'lobby') { $('lobbyNote').hidden = false; $('lobbyNote').textContent = String(m.msg).slice(0, 80); } }
       else if (m.t === 's') setRemote(m.id, m.s); else if (m.t === 'bye') dropRemote(m.id);
-      else if (m.t === 'rk') onRk(m); else if (m.t === 'hit') onHit(m); else if (m.t === 'shot') onShot(m); else if (m.t === 'kill') onKill(m);
+      else if (m.t === 'rk') onRk(m); else if (m.t === 'hit') onHit(m); else if (m.t === 'shot') onShot(m); else if (m.t === 'kill') onKill(m); else if (m.t === 'drop') onDrop(m); else if (m.t === 'took') onTook(m);
     };
   }
   setInterval(() => { net({ t: 'p' }); }, 5000);
@@ -2383,11 +2455,11 @@
   $('crouchBtn').addEventListener('pointerdown', e => { e.preventDefault(); crouchTog = !crouchTog; $('crouchBtn').setAttribute('aria-pressed', String(crouchTog)); });
   $('scoreBtn').addEventListener('click', () => showScore(!scoreOn));
   $('teamBtn').addEventListener('click', () => { if (teamMode() && myTeam >= 0) net({ t: 'team', team: 1 - myTeam }); });
-  $('swapBtn').addEventListener('pointerdown', e => { e.preventDefault(); setWeapon((cur + 1) % WEAPONS.length); });
-  $('ammoBox').addEventListener('pointerdown', e => { if (!touchMode) return; e.preventDefault(); setWeapon((cur + 1) % WEAPONS.length); }); // chạm vào ô đạn cũng đổi súng
+  $('swapBtn').addEventListener('pointerdown', e => { e.preventDefault(); cycleW(1); });
+  $('ammoBox').addEventListener('pointerdown', e => { if (!touchMode) return; e.preventDefault(); cycleW(1); }); // chạm vào ô đạn cũng đổi súng
   const autoLabel = () => { $('autoBtn').textContent = 'Tự bắn: ' + (autoFire ? 'Bật' : 'Tắt'); };
   $('autoBtn').addEventListener('click', () => { autoFire = !autoFire; try { localStorage.setItem('hm-af', autoFire ? '1' : '0'); } catch (e) {} autoLabel(); }); autoLabel();
-  view.addEventListener('wheel', e => { if (state !== 'play') return; e.preventDefault(); setWeapon((cur + (e.deltaY > 0 ? 1 : WEAPONS.length - 1)) % WEAPONS.length); }, { passive: false });
+  view.addEventListener('wheel', e => { if (state !== 'play') return; e.preventDefault(); cycleW(e.deltaY > 0 ? 1 : -1); }, { passive: false });
   const GAMEKEYS = /^(Key[WASDRQCV]|Arrow|Space|Shift|Control|Digit[0-9]|Minus)/;
   addEventListener('keydown', e => {
     if (state === 'play' && GAMEKEYS.test(e.code)) e.preventDefault(); keys.add(e.code);
@@ -2426,7 +2498,8 @@
   let savedQ = null; try { const sq = localStorage.getItem('hm-q2'); if (sq && QUAL[sq]) savedQ = sq; } catch (e) {}
   setQuality(savedQ || qName, !savedQ);
   loadMap(savedMap); skin(gun);
-  window.__hm = { fire: v => { firing = !!v; }, stats: () => ({ calls: lastInfo.calls, tris: lastInfo.tris, bakeMs: Math.round(bakeMs), quality: qName, guns: WEAPONS.map(w => w.name + ' ' + triCount(w.g)), pos: [Math.round(P.pos.x * 10) / 10, Math.round(P.pos.z * 10) / 10], yaw: Math.round(P.yaw * 100) / 100, rot, size: [W, H], ammo: GUN.ammo, soldier: Math.round(Object.keys(SOLDIER).reduce((n, k) => n + SOLDIER[k].reduce((m, it) => m + it[0].index.count / 3, 0) * (k === 'shin' ? 2 : 1), 0)), drones: enemies.map(e => e.type + ' ' + triCount(e.g)) }) };
+  window.__hm = { fire: v => { firing = !!v; }, stats: () => ({ calls: lastInfo.calls, tris: lastInfo.tris, bakeMs: Math.round(bakeMs), quality: qName, guns: WEAPONS.map(w => w.name + ' ' + triCount(w.g)), pos: [Math.round(P.pos.x * 10) / 10, Math.round(P.pos.z * 10) / 10], yaw: Math.round(P.yaw * 100) / 100, rot, size: [W, H], ammo: GUN.ammo, soldier: Math.round(Object.keys(SOLDIER).reduce((n, k) => n + SOLDIER[k].reduce((m, it) => m + it[0].index.count / 3, 0) * (k === 'shin' ? 2 : 1), 0)), drones: enemies.map(e => e.type + ' ' + triCount(e.g)) }),
+    dbg: { w: () => WEAPONS.map(w => [w.ammo, w.res]), cur: () => cur, set: (i, a, r) => { WEAPONS[i].ammo = a; WEAPONS[i].res = r; }, sel: i => setWeapon(i), tp: (x, z) => { P.pos.x = x; P.pos.z = z; }, crate: () => crateAt(P.pos.x, P.pos.z), drop: (w, x, z) => addDrop('t' + (++dropSeq), w, 30, x, z, 30, true), drops: () => [...drops.values()].map(d => [d.id, d.w, d.am, r2(d.x), r2(d.z), Math.round(d.life)]), me: () => ({ hp: P.hp, dead, id: myId, out: outSwitch }) } };
   function decor() { wave = 1; for (let i = 0; i < 4; i++) spawn(i === 3 ? 'heavy' : 'scout', { a: i * 1.7, r: 1.6 + (i % 2) * .8, y: 3.4 + i * .7, z: -4 - i * 3, w: (i % 2 ? -1 : 1) * (.22 + i * .04) }); }
   decor();
   progress(.95); await tick();

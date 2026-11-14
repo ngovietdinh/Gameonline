@@ -1,6 +1,6 @@
 // Logic phòng đấu dùng chung cho máy chủ LAN (server.js) và Cloudflare (src/worker.js).
 // Không phụ thuộc cách truyền tin: nơi gọi đưa vào hàm gửi chuỗi và hàm đóng kết nối.
-const MAX_CLIENTS = 64, MAX_ROOMS = 20, MAX_ROOM_PLAYERS = 16, STALE_MS = 20000;
+const MAX_CLIENTS = 64, MAX_ROOMS = 20, MAX_ROOM_PLAYERS = 16, STALE_MS = 20000, DROP_MS = 30000, MAX_DROPS = 24;
 const CODE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const num = v => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v * 100) / 100 : 0);
 const clean = (s, n) => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, n);
@@ -33,11 +33,14 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
     if (c.room) leave(c);
     c.team = teamCount(r, 0) <= teamCount(r, 1) ? 0 : 1; // vào phe đang ít người hơn
     r.members.add(c); c.room = r; c.state = null; pushRoom(r);
-    if (r.state === 'play') for (const o of r.members) if (o !== c && o.state) send(c, { t: 's', id: o.id, s: o.state });
+    if (r.state === 'play') {
+      for (const o of r.members) if (o !== c && o.state) send(c, { t: 's', id: o.id, s: o.state });
+      const now = Date.now(); for (const d of r.drops.values()) if (now - d.at < DROP_MS) send(c, { t: 'drop', id: d.id, w: d.w, am: d.am, x: d.x, z: d.z, life: DROP_MS - (now - d.at) });
+    }
     pushRooms();
   }
   function startMatch(r) {
-    r.state = 'play'; r.endAt = Date.now() + r.dur * 60000; r.score = [0, 0]; for (const c of r.members) c.state = null;
+    r.state = 'play'; r.endAt = Date.now() + r.dur * 60000; r.score = [0, 0]; r.drops.clear(); for (const c of r.members) c.state = null;
     if (r.mode === 'team') for (let guard = 0; guard < 16; guard++) { // cân lại nếu hai phe chênh nhau quá 2 người: chuyển người vào sau cùng của phe đông
       const a = teamCount(r, 0), b = teamCount(r, 1); if (Math.abs(a - b) <= 2) break;
       const big = a > b ? 0 : 1, last = [...r.members].filter(c => c.team === big).pop(); if (!last) break; last.team = 1 - big;
@@ -48,7 +51,7 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
   }
   function endMatch(r) {
     if (rooms.get(r.code) !== r || r.state !== 'play') return;
-    r.state = 'wait';
+    r.state = 'wait'; r.drops.clear();
     const board = [...r.members].map(c => ({ id: c.id, n: c.name, team: c.team, k: c.state ? c.state.k : 0, d: c.state ? c.state.d : 0 })).sort((a, b) => b.k - a.k || a.d - b.d);
     for (const c of r.members) { send(c, { t: 'end', board, score: r.score, mode: r.mode }); c.state = null; }
     log('  phòng ' + r.code + ' hết giờ' + (board[0] ? ', dẫn đầu: ' + board[0].n + ' (' + board[0].k + ' hạ)' : ''));
@@ -64,7 +67,7 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
       case 'create': {
         if (rooms.size >= MAX_ROOMS) { send(c, { t: 'err', msg: 'Máy chủ đã đủ số phòng.' }); break; }
         c.name = clean(m.n, 12) || c.name;
-        const room = { code: newCode(), name: clean(m.name, 20) || 'Phòng của ' + c.name, host: c.id, dur: clampNum(m.dur, .1, 30, 5), max: Math.round(clampNum(m.max, 2, MAX_ROOM_PLAYERS, 8)), map: Math.round(clampNum(m.map, 0, 9, 0)), mode: m.mode === 'ffa' ? 'ffa' : 'team', score: [0, 0], state: 'wait', endAt: 0, members: new Set(), timer: null };
+        const room = { code: newCode(), name: clean(m.name, 20) || 'Phòng của ' + c.name, host: c.id, dur: clampNum(m.dur, .1, 30, 5), max: Math.round(clampNum(m.max, 2, MAX_ROOM_PLAYERS, 8)), map: Math.round(clampNum(m.map, 0, 9, 0)), mode: m.mode === 'ffa' ? 'ffa' : 'team', score: [0, 0], state: 'wait', endAt: 0, members: new Set(), timer: null, drops: new Map(), dropSeq: 0 };
         rooms.set(room.code, room); log('  phòng ' + room.code + ' "' + room.name + '" do ' + c.name + ' tạo');
         join(c, room); break;
       }
@@ -97,7 +100,22 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
         if (!r || r.state !== 'play') break;
         const by = typeof m.by === 'string' ? m.by.slice(0, 12) : null, killer = by ? clients.get(by) : null;
         toRoom(r, c, { t: 'kill', from: c.id, by });
+        const w = m.w | 0, am = Math.min(400, m.am | 0), now = Date.now();
+        if (c.state && w >= 0 && w <= 8 && am > 0 && now - (c.dropAt || 0) > 1500) { // khẩu súng đang cầm rơi lại chỗ bị hạ, ai tới trước thì nhặt
+          c.dropAt = now; for (const [id, d] of r.drops) if (now - d.at > DROP_MS) r.drops.delete(id);
+          if (r.drops.size >= MAX_DROPS) r.drops.delete(r.drops.keys().next().value);
+          const d = { id: 'd' + (++r.dropSeq), w, am, x: c.state.x, z: c.state.z, at: now }; r.drops.set(d.id, d);
+          toRoom(r, null, { t: 'drop', id: d.id, w, am, x: d.x, z: d.z, life: DROP_MS });
+        }
         if (r.mode === 'team' && killer && killer.room === r && killer.team !== c.team) { r.score[killer.team]++; toRoom(r, null, { t: 'score', s: r.score }); }
+        break;
+      }
+      case 'take': { // nhặt súng rơi: phải còn sống và đứng gần, ai gửi trước thì được
+        if (!r || r.state !== 'play' || !c.state || !c.state.a) break;
+        const d = r.drops.get(String(m.id)); if (!d) break;
+        if (Date.now() - d.at > DROP_MS) { r.drops.delete(d.id); break; }
+        if (Math.hypot(c.state.x - d.x, c.state.z - d.z) > 4) break;
+        r.drops.delete(d.id); toRoom(r, null, { t: 'took', id: d.id, by: c.id, w: d.w, am: d.am });
         break;
       }
       case 'team': { // đổi phe: hai phe không được chênh nhau quá 2 người

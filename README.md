@@ -66,13 +66,32 @@ Ghi chú:
 
 ## Bản đồ
 
-Chọn bản đồ ở màn hình đầu (chơi đơn) hoặc lúc tạo phòng (đấu nhiều người).
+Chọn bản đồ ở màn hình đầu (chơi đơn) hoặc lúc tạo phòng (đấu nhiều người). Có 5 bản đồ, mỗi bản đồ rộng khoảng 112 đến 124 m mỗi chiều (gấp khoảng 4 lần bản cũ), chia ba khu A, B, C nối nhau bằng nhiều lối, có đường vòng chạy dọc hai bên và hai con đường xuất phát ở hai đầu. Đấu đội: Công an xuất phát ở đầu nam, Tội phạm ở đầu bắc.
 
-| Bản đồ | Đặc điểm |
+| Bản đồ | Khu A | Khu B | Khu C |
+|---|---|---|---|
+| Hẻm | Sân đình có sạp hàng | Hẻm giữa và sân trong | Phố lớn có xe tải, trạm xe buýt |
+| Chợ đêm | Phố ăn | Quảng trường có sân khấu, đài phun nước | Bãi xe |
+| Công trường | Khung nhà đang xây | Bãi vật liệu | Ban chỉ huy, cần trục tháp |
+| Bến cảng (mới) | Sân kho | Bãi công-ten-nơ | Cầu tàu có cần trục giàn |
+| Nhà máy (mới) | Xưởng có mái tôn | Sân bồn chứa | Kho có dãy kệ |
+
+Bản đồ nhỏ ở góc trên phải vẽ cả bản đồ kèm chữ A, B, C; đứng trong khu nào thì tên khu hiện ngay dưới bản đồ nhỏ. Mỗi khu có một biển chữ phát sáng trên cột.
+
+Cách dựng: mỗi bản đồ chỉ khai báo các khoảng trống (đường, hẻm, sân); phần còn lại trò chơi tự chia thành nhà, tự gắn mặt tiền, cột đèn và đồ đạc dọc chân tường. Để nhẹ máy, khối tĩnh gộp theo ô 32 m, vật ở xa hơn 66 m (đã chìm trong sương) không vẽ, nhà ở xa ba khu chính dùng mặt tiền rút gọn, và dàn đèn thật chỉ bật cho những ngọn gần người chơi nhất.
+
+## Lựu đạn ném tay
+
+Vào trận và mỗi lần hồi sinh có 3 quả mỗi loại. Giữ **G** để hiện đường bay, nhả ra là ném; **H** đổi loại. Trên điện thoại: nút Ném, và nút bên trên nó để đổi loại.
+
+| Loại | Tác dụng |
 |---|---|
-| Hẻm | Hẻm hẹp, sân trong và một con phố lớn ở cuối hẻm. Nhiều góc khuất, hợp đánh gần |
-| Chợ đêm | Quảng trường rộng có đài phun nước, hai dãy sạp, sân khấu. Tầm nhìn xa, hợp súng tỉa |
-| Công trường | Nhà hai tầng đang xây, giàn giáo, bãi ống cống, lán chỉ huy, cần trục. Nửa kín nửa trống |
+| Nổ (sát thương) | Nảy và lăn, 2,6 giây sau khi ném thì nổ, bán kính 7 m, tối đa 140 sát thương ở tâm. Đứng gần cũng mất máu |
+| Khói | 1,9 giây sau tỏa màn khói rộng khoảng 5 m, kéo dài 15 giây. Che tầm nhìn, che tên người chơi, điện thoại không tự bắn xuyên khói, máy bay tuần tra không thấy mày qua khói |
+| Choáng | 1,6 giây sau chớp sáng. Ai nhìn thấy nó trong 24 m thì trắng màn hình tới gần 3 giây, quay lưng lại thì nhẹ hơn, có tường che thì không sao. Chơi đơn: máy bay trong 16 m ngừng bắn 3,5 giây |
+| Cháy | Vỡ ngay khi chạm tường, đất hoặc người, lửa cháy 7 giây trong bán kính 3,4 m, khoảng 30 sát thương mỗi giây. Chính mày đứng trong lửa của mình cũng mất máu |
+
+Khói, lửa và chớp sáng hiện ở cùng một chỗ trên mọi máy vì máy người ném báo điểm nổ cho cả phòng.
 
 ## Vũ khí
 
@@ -109,8 +128,8 @@ Số đo lấy trên bản đồ Hẻm, mức đồ họa Vừa, bằng bộ đo
 | Hạng mục | Yêu cầu | Hiện trạng |
 |---|---|---|
 | 1. Phong cách | Low-poly hoặc stylized, hạn chế PBR nặng | Mức Thấp và Vừa (mặc định) dùng chất liệu nhẹ không PBR. PBR chỉ còn ở mức Cao cho máy mạnh |
-| 2. Đa giác | Nhân vật 3.000–6.000, vũ khí 4.000–8.000, vật thể 100–1.500 | Lính 3.980 tam giác. Súng 444–1.344 (chưa tính tay), dưới mức trần. Máy bay 2.382. Cả cảnh khoảng 87.000 |
-| 3. Texture | Atlas, tối đa 2048 và 1024, nén WebP hoặc KTX2 | Mọi texture sinh bằng mã lúc tải, cỡ 256–512, không tải file ảnh nào. Khối tĩnh gộp theo chất liệu thay cho atlas. Chưa đạt: còn khoảng 340 lượt vẽ, phần lớn do súng và dây điện chưa gộp |
+| 2. Đa giác | Nhân vật 3.000–6.000, vũ khí 4.000–8.000, vật thể 100–1.500 | Lính 3.980 tam giác. Súng 444–1.344 (chưa tính tay), dưới mức trần. Máy bay 2.382. Bản đồ giờ rộng gấp 4 nên cả cảnh nặng hơn: Hẻm vẽ 68.000–150.000 tam giác tuỳ chỗ đứng (nặng nhất khi nhìn dọc hẻm giữa), Chợ đêm 65.000–125.000, Công trường, Nhà máy 37.000–57.000, Bến cảng 20.000–34.000 |
+| 3. Texture | Atlas, tối đa 2048 và 1024, nén WebP hoặc KTX2 | Mọi texture sinh bằng mã lúc tải, cỡ 256–512, không tải file ảnh nào. Khối tĩnh gộp theo chất liệu thay cho atlas. Chưa đạt: 140–570 lượt vẽ tuỳ góc nhìn (bản đồ lớn có nhiều cột đèn, thùng, bàn ghế rời chưa gộp) |
 | 4. Hiệu ứng hạt | Ít hạt, sprite 2D, có giới hạn | Tối đa 420 hạt và 46 sprite khói dùng lại. Mức Vừa giảm 25% số hạt, mức Thấp giảm 50% |
 | 5. Ánh sáng | Lightmap nướng sẵn, bóng đơn giản | Mức Thấp và Vừa nướng ánh sáng vào màu đỉnh lúc dựng bản đồ (8–47 ms), có bóng khuất do nhà và vật cản. Nhân vật dùng bóng tròn dưới chân. Hạn chế: chớp lửa đầu nòng và vụ nổ không rọi sáng tường ở hai mức này |
 | 6. Giao diện | Phẳng, tối giản, có tâm ngắm, máu, đạn, bản đồ nhỏ | Có đủ, kể cả bản đồ nhỏ: đồng đội luôn hiện, đối thủ chỉ hiện chốc lát sau khi nổ súng. Không dùng blur |
@@ -126,7 +145,7 @@ Ghi chú về quy trình: game không dùng file mô hình ngoài, mọi hình k
 
 ## Điều khiển
 
-- Máy tính: WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, 1 đến 9, 0, - đổi súng, Space nhảy, Esc tạm dừng.
+- Máy tính: WASD chạy, chuột ngắm, chuột trái bắn, chuột phải ngắm kỹ, R nạp đạn, G ném lựu đạn (H đổi loại), 1 đến 9, 0, - đổi súng, Space nhảy, Esc tạm dừng.
 - **Shift** (giữ, khi đang tiến): chạy nhanh. **Ctrl** hoặc **C** (giữ): ngồi, đi chậm hơn, bắn chụm hơn, khó bị trúng hơn. **Tab** (giữ): bảng thành tích.
 - Khi vào trận, game tự bật toàn màn hình. Trên Chrome và Edge việc này còn khóa phím, nhờ đó giữ Ctrl rồi bấm W không đóng thẻ trình duyệt. Trên Firefox và Safari, Ctrl+W vẫn là lệnh đóng thẻ (trình duyệt sẽ hỏi lại trước khi đóng), nên dùng phím C để ngồi.
 - Điện thoại:
@@ -134,7 +153,7 @@ Ghi chú về quy trình: game không dùng file mô hình ngoài, mọi hình k
   - Cần ảo bên trái để chạy: luôn hiện ở góc dưới trái, chạm chỗ nào trong nửa trái thì cần nhảy tới đó. Đẩy hết cỡ là chạy nhanh.
   - Kéo nửa phải để ngắm; vuốt nhanh thì xoay nhiều hơn.
   - Súng tự bắn khi tâm ngắm trúng địch (tắt được ở màn hình tạm dừng). Tên lửa và phóng lựu không tự bắn.
-  - Nút bên phải: Bắn, Ngắm, Nạp, Nhảy, Ngồi, Đổi. Chạm vào ô đạn cũng đổi súng. Nút ≡ ở góc trên phải mở bảng thành tích.
+  - Nút bên phải: Bắn, Ngắm, Nạp, Nhảy, Ngồi, Đổi, Ném và nút đổi loại lựu đạn. Chạm vào ô đạn cũng đổi súng. Nút ≡ ở góc trên phải mở bảng thành tích.
   - Máy rung nhẹ khi trúng đạn (Android).
 
 ## Trong thư mục có gì

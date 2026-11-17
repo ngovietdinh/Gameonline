@@ -94,7 +94,10 @@ export function createHub({ addrs = () => [], log = () => {} } = {}) {
         break;
       case 'rk': // tên lửa hoặc lựu đạn: các máy khác tự mô phỏng đường bay để hiển thị
         if (r && r.state === 'play' && Array.isArray(m.o) && Array.isArray(m.v) && m.o.length === 3 && m.v.length === 3 && m.o.every(Number.isFinite) && m.v.every(Number.isFinite))
-          toRoom(r, c, { t: 'rk', from: c.id, k: m.k ? 1 : 0, o: m.o.map(num), v: m.v.map(x => Math.round(Math.max(-1, Math.min(1, x)) * 1000) / 1000) });
+          toRoom(r, c, { t: 'rk', from: c.id, k: Math.min(7, Math.max(0, m.k | 0)), n: m.n & 0xffff, o: m.o.map(num), v: m.v.map(x => Math.round(Math.max(-1, Math.min(1, x)) * 1000) / 1000) });
+        break;
+      case 'gx': // lựu đạn ném tay phát nổ: người ném báo điểm nổ để mọi máy hiện khói, lửa, chớp ở cùng một chỗ
+        if (r && r.state === 'play' && Array.isArray(m.p) && m.p.length === 3 && m.p.every(Number.isFinite)) toRoom(r, c, { t: 'gx', from: c.id, k: Math.min(7, Math.max(2, m.k | 0)), n: m.n & 0xffff, p: m.p.map(num) });
         break;
       case 'kill': {
         if (!r || r.state !== 'play') break;
